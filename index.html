@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SGE Galera PRO</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial; background:#0f172a; color:white; padding:20px;}
+    .card { background:#1e293b; padding:20px; margin:10px; border-radius:10px;}
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); gap:10px;}
+    h1 { color:#38bdf8; }
+    input { margin:5px; padding:10px; border-radius:5px; border:none; width:95%;}
+    button { padding:12px; background:#38bdf8; border:none; border-radius:5px; cursor:pointer;}
+  </style>
+</head>
+
+<body>
+
+<h1>🚀 SGE Galera PRO 2.0</h1>
+
+<div class="grid">
+  <div class="card">
+    <h3>ROI Promedio</h3>
+    <h1 id="roi">2.3x</h1>
+  </div>
+
+  <div class="card">
+    <h3>Ensayo → Venta</h3>
+    <h1>28%</h1>
+  </div>
+
+  <div class="card">
+    <h3>Ventas Generadas</h3>
+    <h1>$2.4M</h1>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Nuevo Ensayo</h2>
+  <input id="cultivo" placeholder="Cultivo">
+  <input id="variedad" placeholder="Variedad">
+  <input id="tratado" placeholder="Rendimiento tratado (kg)">
+  <input id="control" placeholder="Rendimiento control (kg)">
+  <input id="precio" placeholder="Precio $/kg">
+  <input id="costo" placeholder="Costo ensayo">
+  <button onclick="calcular()">Calcular ROI</button>
+</div>
+
+<div class="card">
+  <h2>Resultado</h2>
+  <h1 id="resultado">—</h1>
+</div>
+
+<script>
+function calcular(){
+  let tratado = parseFloat(document.getElementById("tratado").value);
+  let control = parseFloat(document.getElementById("control").value);
+  let precio = parseFloat(document.getElementById("precio").value);
+  let costo = parseFloat(document.getElementById("costo").value);
+
+  if(isNaN(tratado) || isNaN(control) || isNaN(precio) || isNaN(costo)){
+    alert("Completa todos los campos");
+    return;
+  }
+
+  let extra = tratado - control;
+  let ingreso = extra * precio;
+  let roi = (ingreso - costo) / costo;
+
+  document.getElementById("resultado").innerText = "ROI: " + roi.toFixed(2) + "x";
+
+  if(roi > 2.5){
+    alert("🔥 ESCALAR VARIEDAD");
+  } else if(roi > 1){
+    alert("⚠️ REPETIR ENSAYO");
+  } else {
+    alert("❌ DESCARTAR");
+  }
+}
+</script>
+
+</body>
+</html>
