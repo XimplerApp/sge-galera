@@ -1,158 +1,165 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>SGE Galera PRO</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Registro de Ensayos - Galera</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<style>
-body {font-family: Arial; background:#0f172a; color:white; padding:20px;}
-.card {background:#1e293b; padding:20px; margin:10px; border-radius:10px;}
-.grid {display:grid; grid-template-columns: repeat(auto-fit,minmax(250px,1fr)); gap:10px;}
-input {padding:8px; margin:5px; width:95%;}
-button {padding:10px; background:#38bdf8; border:none;}
-</style>
+  <style>
+    body {font-family: Arial; background:#0f172a; color:white; padding:20px;}
+    h1 {color:#38bdf8;}
+    .container {max-width:1000px; margin:auto;}
+    .card {background:#1e293b; padding:20px; border-radius:10px; margin-bottom:20px;}
+    input, select {
+      width:100%;
+      padding:10px;
+      margin:8px 0;
+      border-radius:6px;
+      border:none;
+    }
+    button {
+      padding:12px;
+      background:#38bdf8;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+      width:100%;
+      font-size:16px;
+    }
+    table {
+      width:100%;
+      border-collapse: collapse;
+      margin-top:20px;
+    }
+    th, td {
+      padding:10px;
+      border:1px solid #334155;
+      text-align:left;
+    }
+    th {background:#1e293b;}
+  </style>
 </head>
 
 <body>
 
-<h1>🚀 SGE Galera PRO 2.1</h1>
+<div class="container">
 
-<!-- PANEL EJECUTIVO -->
-<div class="grid">
-  <div class="card"><h3>ROI Promedio</h3><h1 id="roiProm">—</h1></div>
-  <div class="card"><h3>Ensayo → Venta</h3><h1 id="conv">—</h1></div>
-  <div class="card"><h3>Leads</h3><h1 id="leads">—</h1></div>
-</div>
+<h1>🚀 Registro de Ensayos - Galera</h1>
 
-<!-- ENSAYO -->
 <div class="card">
+
 <h2>Nuevo Ensayo</h2>
-<input id="variedad" placeholder="Variedad">
+
+<input id="tecnico" placeholder="Técnico responsable">
 <input id="region" placeholder="Región">
-<input id="tratado" placeholder="Rendimiento tratado">
-<input id="control" placeholder="Control">
-<input id="precio" placeholder="Precio">
-<input id="costo" placeholder="Costo">
-<input id="leadsIn" placeholder="Leads generados">
-<button onclick="guardar()">Guardar</button>
+<input id="cultivo" placeholder="Cultivo (Tomate, Pimiento...)">
+<input id="objetivo" placeholder="Objetivo del ensayo">
+
+<input id="ciclo" placeholder="Ciclo agrícola">
+
+<select id="sistema">
+  <option>Campo abierto</option>
+  <option>Invernadero</option>
+</select>
+
+<input id="suelo" placeholder="Tipo de suelo">
+<input id="riego" placeholder="Sistema de riego">
+
+<label>Fecha siembra</label>
+<input type="date" id="siembra">
+
+<label>Fecha cosecha estimada</label>
+<input type="date" id="cosecha">
+
+<input id="variedadTratada" placeholder="Variedad tratada (Galera)">
+<input id="variedadControl" placeholder="Variedad control">
+<input id="proveedor" placeholder="Proveedor control">
+
+<input id="superficie" placeholder="Superficie (ha o m²)">
+<input id="productor" placeholder="Productor">
+
+<select id="estado">
+  <option>Planeado</option>
+  <option>Activo</option>
+  <option>Terminado</option>
+</select>
+
+<button onclick="guardar()">Guardar Ensayo</button>
+
 </div>
 
-<!-- TABLA -->
 <div class="card">
-<h2>Ensayos</h2>
-<table border="1" width="100%">
-<thead><tr>
-<th>Variedad</th><th>ROI</th><th>Leads</th><th>Decisión</th>
-</tr></thead>
+<h2>Ensayos Registrados</h2>
+
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Cultivo</th>
+<th>Variedad</th>
+<th>Región</th>
+<th>Estado</th>
+</tr>
+</thead>
+
 <tbody id="tabla"></tbody>
+
 </table>
 </div>
 
-<!-- RANKING -->
-<div class="card">
-<h2>Ranking Variedades</h2>
-<canvas id="ranking"></canvas>
-</div>
-
-<!-- RICE -->
-<div class="card">
-<h2>RICE Score</h2>
-<input id="reach" placeholder="Reach">
-<input id="impact" placeholder="Impact">
-<input id="confidence" placeholder="Confidence">
-<input id="effort" placeholder="Effort">
-<button onclick="rice()">Calcular</button>
-<h2 id="riceRes"></h2>
-</div>
-
-<!-- RADAR -->
-<div class="card">
-<h2>Radar Varietal</h2>
-<canvas id="radar"></canvas>
 </div>
 
 <script>
 
-let data = [];
+let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
 
 function guardar(){
-let tratado = +document.getElementById("tratado").value;
-let control = +document.getElementById("control").value;
-let precio = +document.getElementById("precio").value;
-let costo = +document.getElementById("costo").value;
-let leads = +document.getElementById("leadsIn").value;
 
-let extra = tratado - control;
-let ingreso = extra * precio;
-let roi = (ingreso - costo) / costo;
+  let ensayo = {
+    id: Date.now(),
+    tecnico: tecnico.value,
+    region: region.value,
+    cultivo: cultivo.value,
+    objetivo: objetivo.value,
+    ciclo: ciclo.value,
+    sistema: sistema.value,
+    suelo: suelo.value,
+    riego: riego.value,
+    siembra: siembra.value,
+    cosecha: cosecha.value,
+    variedadTratada: variedadTratada.value,
+    variedadControl: variedadControl.value,
+    proveedor: proveedor.value,
+    superficie: superficie.value,
+    productor: productor.value,
+    estado: estado.value
+  };
 
-let decision = "DESCARTAR";
-if(roi > 2.5) decision="ESCALAR";
-else if(roi > 1) decision="REPETIR";
+  ensayos.push(ensayo);
 
-data.push({
-variedad: document.getElementById("variedad").value,
-roi, leads, decision
-});
+  localStorage.setItem("ensayos", JSON.stringify(ensayos));
 
-render();
+  render();
 }
 
 function render(){
-let tbody = document.getElementById("tabla");
-tbody.innerHTML="";
 
-let totalROI=0, totalLeads=0;
+  let tabla = document.getElementById("tabla");
+  tabla.innerHTML = "";
 
-data.forEach(e=>{
-tbody.innerHTML += `<tr>
-<td>${e.variedad}</td>
-<td>${e.roi.toFixed(2)}</td>
-<td>${e.leads}</td>
-<td>${e.decision}</td>
-</tr>`;
-totalROI+=e.roi;
-totalLeads+=e.leads;
-});
-
-document.getElementById("roiProm").innerText=(totalROI/data.length||0).toFixed(2);
-document.getElementById("leads").innerText=totalLeads;
-document.getElementById("conv").innerText=(data.filter(e=>e.decision=="ESCALAR").length/data.length*100||0).toFixed(0)+"%";
-
-ranking();
-radar();
+  ensayos.forEach(e => {
+    tabla.innerHTML += `
+      <tr>
+        <td>${e.id}</td>
+        <td>${e.cultivo}</td>
+        <td>${e.variedadTratada}</td>
+        <td>${e.region}</td>
+        <td>${e.estado}</td>
+      </tr>
+    `;
+  });
 }
 
-function ranking(){
-let ctx=document.getElementById("ranking");
-new Chart(ctx,{
-type:'bar',
-data:{
-labels:data.map(e=>e.variedad),
-datasets:[{label:"ROI", data:data.map(e=>e.roi)}]
-}
-});
-}
-
-function rice(){
-let r=reach.value, i=impact.value, c=confidence.value, e=effort.value;
-let score=(r*i*c)/e;
-document.getElementById("riceRes").innerText="Score: "+score.toFixed(2);
-}
-
-function radar(){
-let ctx=document.getElementById("radar");
-new Chart(ctx,{
-type:'radar',
-data:{
-labels:["Rendimiento","Calidad","ROI","Conversión","Adopción","Facilidad"],
-datasets:[{
-label:"Variedad",
-data:[4,5,3,4,5,3]
-}]
-}
-});
-}
+render();
 
 </script>
 
