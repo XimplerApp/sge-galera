@@ -4,10 +4,8 @@
   <title>Bitácora de Ensayos</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Excel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
@@ -20,14 +18,13 @@
     .export {background:#22c55e;}
     .edit {background:#f59e0b;}
     .delete {background:#ef4444;}
-    #map {height:300px; border-radius:10px; margin-top:10px;}
+    #map {height:300px; border-radius:10px;}
     img {max-width:100%; border-radius:10px; margin-top:10px;}
   </style>
 </head>
 
 <body>
 
-<!-- NAV -->
 <div style="display:flex; gap:10px; margin-bottom:20px;">
   <a href="index.html"><button>📋 Ensayos</button></a>
   <a href="bitacora.html"><button>📸 Bitácora</button></a>
@@ -35,7 +32,7 @@
 
 <h1>📸 Bitácora de Ensayos</h1>
 
-<!-- FORMULARIO -->
+<!-- FORM -->
 <div class="card">
 
 <h2 id="modo">Nuevo Registro</h2>
@@ -54,7 +51,6 @@
 
 <input type="file" id="foto">
 
-<h3>Ubicación (opcional)</h3>
 <div id="map"></div>
 <p id="coords"></p>
 
@@ -62,18 +58,14 @@
 
 </div>
 
-<!-- FILTROS -->
+<!-- FILTRO SIMPLE -->
 <div class="card">
 
-<h2>Filtros</h2>
+<h2>Filtrar Bitácora</h2>
 
-<select id="filtroId"></select>
-<select id="filtroTecnico"></select>
-<select id="filtroCultivo"></select>
-<select id="filtroVariedad"></select>
+<select id="filtroEnsayo"></select>
 
 <button onclick="render()">Aplicar</button>
-<button onclick="limpiarFiltros()">Limpiar</button>
 
 </div>
 
@@ -89,7 +81,6 @@
 
 <script>
 
-// ===== DATA =====
 let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
 let bitacora = JSON.parse(localStorage.getItem("bitacora")) || [];
 
@@ -97,45 +88,19 @@ let editId = null;
 let lat=null, lng=null;
 let marker;
 
-// ===== CARGAR ENSAYOS =====
+// ===== CARGAR ENSAYOS (FORM + FILTRO) =====
 function cargarEnsayos(){
+
   ensayoSelect.innerHTML="";
+  filtroEnsayo.innerHTML='<option value="">Todos los ensayos</option>';
+
   ensayos.forEach(e=>{
-    ensayoSelect.innerHTML+=`<option value="${e.id}">
-      ${e.cultivo} - ${e.variedad_tratada}
-    </option>`;
-  });
-}
 
-// ===== CARGAR FILTROS =====
-function cargarFiltros(){
+    let texto = `${e.id} | ${e.cultivo} | ${e.variedad_tratada} | ${e.productor}`;
 
-  // ID Ensayo
-  let ids = [...new Set(bitacora.map(b => b.ensayo_id))];
-  filtroId.innerHTML='<option value="">Todos los ensayos</option>';
-  ids.forEach(id=>{
-    filtroId.innerHTML+=`<option value="${id}">${id}</option>`;
-  });
+    ensayoSelect.innerHTML += `<option value="${e.id}">${texto}</option>`;
 
-  // Técnico
-  let tecnicos=[...new Set(ensayos.map(e=>e.tecnico))];
-  filtroTecnico.innerHTML='<option value="">Todos los técnicos</option>';
-  tecnicos.forEach(t=>{
-    if(t) filtroTecnico.innerHTML+=`<option>${t}</option>`;
-  });
-
-  // Cultivo
-  let cultivos=[...new Set(ensayos.map(e=>e.cultivo))];
-  filtroCultivo.innerHTML='<option value="">Todos los cultivos</option>';
-  cultivos.forEach(c=>{
-    if(c) filtroCultivo.innerHTML+=`<option>${c}</option>`;
-  });
-
-  // Variedad
-  let variedades=[...new Set(ensayos.map(e=>e.variedad_tratada))];
-  filtroVariedad.innerHTML='<option value="">Todas las variedades</option>';
-  variedades.forEach(v=>{
-    if(v) filtroVariedad.innerHTML+=`<option>${v}</option>`;
+    filtroEnsayo.innerHTML += `<option value="${e.id}">${texto}</option>`;
   });
 }
 
@@ -196,7 +161,6 @@ function guardarRegistro(fotoBase64){
 
   limpiarFormulario();
   render();
-  cargarFiltros();
 }
 
 // ===== EDITAR =====
@@ -216,7 +180,6 @@ function editar(id){
 
   if(lat){
     marker=L.marker([lat,lng]).addTo(map);
-    coords.innerText=`Lat: ${lat} | Lng: ${lng}`;
   }
 }
 
@@ -226,17 +189,7 @@ function eliminar(id){
     bitacora = bitacora.filter(b=>b.id!=id);
     localStorage.setItem("bitacora", JSON.stringify(bitacora));
     render();
-    cargarFiltros();
   }
-}
-
-// ===== FILTROS =====
-function limpiarFiltros(){
-  filtroId.value="";
-  filtroTecnico.value="";
-  filtroCultivo.value="";
-  filtroVariedad.value="";
-  render();
 }
 
 // ===== RENDER =====
@@ -244,14 +197,9 @@ function render(){
 
   let lista = bitacora;
 
-  lista = lista.filter(b=>{
-    let e = ensayos.find(x=>x.id==b.ensayo_id);
-
-    return (!filtroId.value || b.ensayo_id==filtroId.value)
-    && (!filtroTecnico.value || e?.tecnico==filtroTecnico.value)
-    && (!filtroCultivo.value || e?.cultivo==filtroCultivo.value)
-    && (!filtroVariedad.value || e?.variedad_tratada==filtroVariedad.value);
-  });
+  if(filtroEnsayo.value){
+    lista = lista.filter(b=>b.ensayo_id==filtroEnsayo.value);
+  }
 
   timeline.innerHTML="";
 
@@ -260,7 +208,7 @@ function render(){
 
     timeline.innerHTML+=`
     <div class="card">
-      <h3>${e?.cultivo || ""} - ${e?.variedad_tratada || ""}</h3>
+      <h3>${e?.id} | ${e?.cultivo} | ${e?.variedad_tratada} | ${e?.productor}</h3>
       <p><b>Responsable:</b> ${b.responsable}</p>
       <p>${b.comentario}</p>
       <p>${b.fecha}</p>
@@ -294,7 +242,7 @@ function exportarExcel(){
   XLSX.writeFile(wb, "Bitacora.xlsx");
 }
 
-// ===== LIMPIAR FORM =====
+// ===== LIMPIAR =====
 function limpiarFormulario(){
   editId=null;
   modo.innerText="Nuevo Registro";
@@ -310,7 +258,6 @@ function limpiarFormulario(){
 
 // ===== INIT =====
 cargarEnsayos();
-cargarFiltros();
 render();
 
 </script>
