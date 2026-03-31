@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bitácora de Ensayos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {font-family: Arial; background:#0f172a; color:white; padding:20px;}
+    h1 {color:#38bdf8;}
+    .card {background:#1e293b; padding:20px; border-radius:10px; margin-bottom:20px;}
+    input, select {
+      width:100%; padding:10px; margin:8px 0; border-radius:6px; border:none;
+    }
+    button {
+      padding:10px; background:#38bdf8; border:none; border-radius:6px; cursor:pointer;
+    }
+    img {max-width:100%; border-radius:10px; margin-top:10px;}
+  </style>
+</head>
+
+<body>
+
+<!-- NAV -->
+<div style="margin-bottom:20px;">
+  <a href="index.html"><button>📋 Ensayos</button></a>
+  <a href="bitacora.html"><button>📸 Bitácora</button></a>
+</div>
+
+<h1>📸 Bitácora de Ensayos</h1>
+
+<div class="card">
+
+<h2>Nuevo Registro</h2>
+
+<select id="ensayoSelect"></select>
+
+<select id="etapa">
+  <option>Siembra</option>
+  <option>Desarrollo</option>
+  <option>Cosecha</option>
+</select>
+
+<input id="comentario" placeholder="Observación técnica">
+
+<input type="file" id="foto">
+
+<button onclick="guardarBitacora()">Guardar</button>
+
+</div>
+
+<div class="card">
+<h2>Timeline</h2>
+<div id="timeline"></div>
+</div>
+
+<script>
+
+let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
+let bitacora = JSON.parse(localStorage.getItem("bitacora")) || [];
+
+// cargar ensayos en dropdown
+function cargarEnsayos(){
+  let select = document.getElementById("ensayoSelect");
+  select.innerHTML = "";
+
+  ensayos.forEach(e=>{
+    select.innerHTML += `<option value="${e.id}">
+      ${e.cultivo} - ${e.variedad_tratada}
+    </option>`;
+  });
+}
+
+// guardar bitacora
+function guardarBitacora(){
+
+  let file = document.getElementById("foto").files[0];
+  let reader = new FileReader();
+
+  reader.onload = function(){
+
+    let registro = {
+      id: Date.now(),
+      ensayo_id: ensayoSelect.value,
+      etapa: etapa.value,
+      comentario: comentario.value,
+      foto: reader.result,
+      fecha: new Date().toLocaleString()
+    };
+
+    bitacora.push(registro);
+
+    localStorage.setItem("bitacora", JSON.stringify(bitacora));
+
+    render();
+  };
+
+  if(file){
+    reader.readAsDataURL(file);
+  } else {
+    alert("Sube una foto");
+  }
+}
+
+// render timeline
+function render(){
+
+  let div = document.getElementById("timeline");
+  div.innerHTML = "";
+
+  bitacora.reverse().forEach(b=>{
+
+    let ensayo = ensayos.find(e => e.id == b.ensayo_id);
+
+    div.innerHTML += `
+      <div class="card">
+        <h3>${ensayo?.cultivo || ""} - ${ensayo?.variedad_tratada || ""}</h3>
+        <p><b>Etapa:</b> ${b.etapa}</p>
+        <p>${b.comentario}</p>
+        <p><small>${b.fecha}</small></p>
+        <img src="${b.foto}">
+      </div>
+    `;
+  });
+}
+
+cargarEnsayos();
+render();
+
+</script>
+
+</body>
+</html>
