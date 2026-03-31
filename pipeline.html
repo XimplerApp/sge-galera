@@ -39,7 +39,7 @@ button {
 table {
     width:100%;
     border-collapse: collapse;
-    text-align:center; /* 🔥 centrado */
+    text-align:center;
 }
 
 th, td {
@@ -51,7 +51,6 @@ th, td {
 
 <body>
 
-<!-- MENU -->
 <div style="display:flex; gap:10px; margin-bottom:20px;">
   <a href="index.html"><button>📋 Ensayos</button></a>
   <a href="bitacora.html"><button>📸 Bitácora</button></a>
@@ -110,7 +109,6 @@ th, td {
 
 <script>
 
-// ===== DATA =====
 let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
 let oportunidades = JSON.parse(localStorage.getItem("oportunidades")) || [];
 
@@ -147,11 +145,14 @@ function guardar(){
     render();
 }
 
-// ===== ELIMINAR =====
+// ===== ELIMINAR CON CONFIRMACIÓN =====
 function eliminar(id){
-    oportunidades = oportunidades.filter(o=>o.id!=id);
-    localStorage.setItem("oportunidades", JSON.stringify(oportunidades));
-    render();
+
+    if(confirm("¿Seguro que deseas eliminar este registro?")){
+        oportunidades = oportunidades.filter(o=>o.id!=id);
+        localStorage.setItem("oportunidades", JSON.stringify(oportunidades));
+        render();
+    }
 }
 
 // ===== DASHBOARD =====
@@ -183,6 +184,8 @@ function calcularDashboard(){
     <div class="kpi">📈 Conversión: ${conversion.toFixed(2)}%</div>
     <div class="kpi ${clase}">Evaluación: ${texto}</div>
     `;
+
+    return {productores, leadsTotal, areaTotal, estimado, ventas, conversion};
 }
 
 // ===== TABLA =====
@@ -223,8 +226,10 @@ function render(){
     calcularDashboard();
 }
 
-// ===== EXPORT EXCEL =====
+// ===== EXPORT EXCEL CON DASHBOARD =====
 function exportarExcel(){
+
+    let resumen = calcularDashboard();
 
     let data = oportunidades.map(o => {
 
@@ -245,10 +250,22 @@ function exportarExcel(){
         };
     });
 
-    let ws = XLSX.utils.json_to_sheet(data);
+    let resumenSheet = [
+        ["Productores interesados", resumen.productores],
+        ["Leads generados", resumen.leadsTotal],
+        ["Área potencial (ha)", resumen.areaTotal],
+        ["Venta estimada", resumen.estimado],
+        ["Venta cerrada", resumen.ventas],
+        ["Conversión (%)", resumen.conversion.toFixed(2)]
+    ];
+
+    let ws1 = XLSX.utils.json_to_sheet(data);
+    let ws2 = XLSX.utils.aoa_to_sheet(resumenSheet);
+
     let wb = XLSX.utils.book_new();
 
-    XLSX.utils.book_append_sheet(wb, ws, "Pipeline");
+    XLSX.utils.book_append_sheet(wb, ws1, "Detalle");
+    XLSX.utils.book_append_sheet(wb, ws2, "Resumen");
 
     XLSX.writeFile(wb, "Pipeline_Comercial.xlsx");
 }
