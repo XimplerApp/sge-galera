@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>SGE - Pipeline Comercial</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #f5f6fa;
+    padding: 20px;
+}
+
+h1 {
+    color: #2c3e50;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
+}
+
+input, select {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0 10px;
+}
+
+button {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #219150;
+}
+
+.resultado {
+    font-weight: bold;
+    font-size: 18px;
+    margin-top: 10px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}
+</style>
+
+</head>
+<body>
+
+<h1>🌱 Pipeline Comercial de Ensayos</h1>
+
+<div class="card">
+
+<h2>Registro Pipeline</h2>
+
+<label>ID Ensayo</label>
+<input id="idEnsayo">
+
+<label>Productores interesados</label>
+<input id="productores" type="number">
+
+<label>Leads generados</label>
+<input id="leads" type="number">
+
+<label>Área potencial (ha)</label>
+<input id="area" type="number">
+
+<label>Venta estimada ($)</label>
+<input id="ventaEstimada" type="number">
+
+<label>Venta cerrada ($)</label>
+<input id="ventaCerrada" type="number">
+
+<label>Recompra</label>
+<select id="recompra">
+<option value="No">No</option>
+<option value="Sí">Sí</option>
+</select>
+
+<button onclick="guardarPipeline()">Guardar</button>
+
+<div class="resultado" id="resultado"></div>
+
+</div>
+
+<div class="card">
+<h2>📊 Dashboard</h2>
+<div id="dashboard"></div>
+</div>
+
+<div class="card">
+<h2>📋 Oportunidades Comerciales</h2>
+
+<label>ID Ensayo</label>
+<input id="idEnsayoO">
+
+<label>Productor interesado</label>
+<select id="interesado">
+<option value="Sí">Sí</option>
+<option value="No">No</option>
+</select>
+
+<label>Área potencial</label>
+<input id="areaO" type="number">
+
+<label>Leads generados</label>
+<input id="leadsO" type="number">
+
+<label>Venta estimada</label>
+<input id="ventaEstimadaO" type="number">
+
+<label>Venta cerrada</label>
+<input id="ventaCerradaO" type="number">
+
+<button onclick="guardarOportunidad()">Agregar</button>
+
+<table id="tablaOportunidades">
+<tr>
+<th>ID</th>
+<th>Interesado</th>
+<th>Área</th>
+<th>Leads</th>
+<th>Venta Estimada</th>
+<th>Venta Cerrada</th>
+</tr>
+</table>
+
+</div>
+
+<script>
+
+// ================= PIPELINE =================
+
+function guardarPipeline() {
+
+    let data = {
+        id: document.getElementById("idEnsayo").value,
+        productores: +document.getElementById("productores").value,
+        leads: +document.getElementById("leads").value,
+        area: +document.getElementById("area").value,
+        ventaEstimada: +document.getElementById("ventaEstimada").value,
+        ventaCerrada: +document.getElementById("ventaCerrada").value,
+        recompra: document.getElementById("recompra").value
+    }
+
+    let lista = JSON.parse(localStorage.getItem("pipeline")) || []
+    lista.push(data)
+
+    localStorage.setItem("pipeline", JSON.stringify(lista))
+
+    calcularDashboard()
+}
+
+// ================= DASHBOARD =================
+
+function calcularDashboard() {
+
+    let lista = JSON.parse(localStorage.getItem("pipeline")) || []
+
+    let totalEnsayos = lista.length
+    let totalVentas = lista.reduce((a,b)=>a+b.ventaCerrada,0)
+    let totalEstimado = lista.reduce((a,b)=>a+b.ventaEstimada,0)
+
+    let conversion = totalEstimado > 0 ? (totalVentas / totalEstimado)*100 : 0
+
+    let evaluacion = conversion >= 25 ? "🟢 Exitoso" : "🔴 Bajo desempeño"
+
+    document.getElementById("dashboard").innerHTML = `
+    Ensayos: ${totalEnsayos}<br>
+    Venta Estimada: $${totalEstimado}<br>
+    Venta Cerrada: $${totalVentas}<br>
+    Conversión: ${conversion.toFixed(2)}%<br>
+    Evaluación: ${evaluacion}
+    `
+}
+
+calcularDashboard()
+
+// ================= OPORTUNIDADES =================
+
+function guardarOportunidad() {
+
+    let data = {
+        id: document.getElementById("idEnsayoO").value,
+        interesado: document.getElementById("interesado").value,
+        area: document.getElementById("areaO").value,
+        leads: document.getElementById("leadsO").value,
+        ventaEstimada: document.getElementById("ventaEstimadaO").value,
+        ventaCerrada: document.getElementById("ventaCerradaO").value
+    }
+
+    let lista = JSON.parse(localStorage.getItem("oportunidades")) || []
+    lista.push(data)
+
+    localStorage.setItem("oportunidades", JSON.stringify(lista))
+
+    cargarTabla()
+}
+
+function cargarTabla() {
+
+    let tabla = document.getElementById("tablaOportunidades")
+    tabla.innerHTML = `
+    <tr>
+    <th>ID</th>
+    <th>Interesado</th>
+    <th>Área</th>
+    <th>Leads</th>
+    <th>Venta Estimada</th>
+    <th>Venta Cerrada</th>
+    </tr>
+    `
+
+    let lista = JSON.parse(localStorage.getItem("oportunidades")) || []
+
+    lista.forEach(o => {
+        tabla.innerHTML += `
+        <tr>
+        <td>${o.id}</td>
+        <td>${o.interesado}</td>
+        <td>${o.area}</td>
+        <td>${o.leads}</td>
+        <td>$${o.ventaEstimada}</td>
+        <td>$${o.ventaCerrada}</td>
+        </tr>
+        `
+    })
+}
+
+cargarTabla()
+
+</script>
+
+</body>
+</html>
