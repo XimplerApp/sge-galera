@@ -61,8 +61,13 @@ button {
 <input id="plaga" placeholder="% incidencia plaga">
 
 <h3>Costos</h3>
+<input id="semillas" placeholder="Semillas $">
 <input id="insumos" placeholder="Insumos $">
-<input id="horas" placeholder="Horas técnico $">
+<input id="material" placeholder="Material $">
+
+<input id="horas" placeholder="Horas técnico (hrs)">
+<input id="costoHora" placeholder="Costo por hora $">
+
 <input id="traslados" placeholder="Traslados $">
 <input id="otros" placeholder="Otros $">
 
@@ -117,8 +122,15 @@ function calcular(){
     let rt = parseFloat(rendTratado.value) || 0;
     let precioVal = parseFloat(precio.value) || 0;
 
+    let semillasVal = parseFloat(semillas.value) || 0;
     let ins = parseFloat(insumos.value) || 0;
+    let mat = parseFloat(material.value) || 0;
+
     let hrs = parseFloat(horas.value) || 0;
+    let costoHr = parseFloat(costoHora.value) || 0;
+
+    let costoHoras = hrs * costoHr;
+
     let tras = parseFloat(traslados.value) || 0;
     let otr = parseFloat(otros.value) || 0;
 
@@ -126,7 +138,8 @@ function calcular(){
     let porcentaje = rc ? (diferencia/rc)*100 : 0;
 
     let ingreso = diferencia * precioVal;
-    let costo = ins + hrs + tras + otr;
+
+    let costo = semillasVal + ins + mat + costoHoras + tras + otr;
 
     let roi = costo ? (ingreso - costo) / costo : 0;
 
@@ -135,12 +148,16 @@ function calcular(){
         <div class="kpi">📊 Mejora %: ${porcentaje.toFixed(2)}%</div>
         <div class="kpi">💰 Ingreso adicional: $${ingreso.toFixed(2)}</div>
         <div class="kpi">💸 Costo total: $${costo.toFixed(2)}</div>
+        <div class="kpi">⏱ Costo horas: $${costoHoras.toFixed(2)}</div>
         <div class="kpi ${roi>=0.3?'green':'red'}">
             ROI: ${(roi*100).toFixed(2)}%
         </div>
     `;
 
-    window.tmp = {diferencia, porcentaje, ingreso, costo, roi};
+    window.tmp = {
+        diferencia, porcentaje, ingreso, costo, roi,
+        costoHoras
+    };
 }
 
 // ===== GUARDAR =====
@@ -160,8 +177,13 @@ function guardar(){
         calidad: calidad.value,
         plaga: plaga.value,
 
+        semillas: semillas.value,
         insumos: insumos.value,
+        material: material.value,
         horas: horas.value,
+        costoHora: costoHora.value,
+        costoHoras: window.tmp.costoHoras,
+
         traslados: traslados.value,
         otros: otros.value,
 
@@ -228,24 +250,26 @@ function exportarExcel(){
         return {
             "ID Ensayo": e.id || "",
             "Cultivo": e.cultivo || "",
-            "Variedad Tratada": e.variedad_tratada || "",
+            "Variedad": e.variedad_tratada || "",
             "Productor": e.productor || "",
 
             "Rendimiento Control": r.rend_control,
             "Rendimiento Tratado": r.rend_tratado,
             "Diferencia": r.diferencia,
             "% Mejora": r.porcentaje,
-            "Calidad": r.calidad,
-            "% Plaga": r.plaga,
 
+            "Semillas": r.semillas,
             "Insumos": r.insumos,
-            "Horas Técnico": r.horas,
+            "Material": r.material,
+            "Horas": r.horas,
+            "Costo Hora": r.costoHora,
+            "Costo Horas": r.costoHoras,
             "Traslados": r.traslados,
             "Otros": r.otros,
             "Costo Total": r.costo,
 
             "Precio": r.precio,
-            "Ingreso Adicional": r.ingreso,
+            "Ingreso": r.ingreso,
             "ROI": r.roi,
 
             "Evaluación": r.evaluacion,
