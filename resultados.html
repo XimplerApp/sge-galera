@@ -3,11 +3,18 @@
 let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
 let resultados = JSON.parse(localStorage.getItem("resultados")) || [];
 
+// ===== HELPERS =====
+const get = id => document.getElementById(id);
+
 // ===== CARGAR ENSAYOS =====
 function cargarEnsayos(){
-    ensayoSelect.innerHTML="";
+    let select = get("ensayoSelect");
+    if(!select) return;
+
+    select.innerHTML="";
+
     ensayos.forEach(e=>{
-        ensayoSelect.innerHTML += `
+        select.innerHTML += `
         <option value="${e.id}">
         ${e.id} | ${e.cultivo} | ${e.variedad_tratada}
         </option>`;
@@ -17,53 +24,56 @@ function cargarEnsayos(){
 // ===== MOTOR DE DECISIÓN =====
 function evaluar(roi, diferencia){
 
-    let evaluacion = "";
-    let recomendacion = "";
-    let repetir = "";
-
     if(diferencia < 0){
-        evaluacion = "No exitoso";
-        recomendacion = "Detener inmediatamente";
-        repetir = "No";
-    }
-    else if(roi < 0){
-        evaluacion = "No exitoso";
-        recomendacion = "No escalar, revisar causa";
-        repetir = "No";
-    }
-    else if(roi < 0.3){
-        evaluacion = "Parcial";
-        recomendacion = "Ajustar variables y validar nuevamente";
-        repetir = "Sí";
-    }
-    else{
-        evaluacion = "Exitoso";
-        recomendacion = "Escalar comercialmente";
-        repetir = "Sí";
+        return {
+            evaluacion: "No exitoso",
+            recomendacion: "Detener inmediatamente",
+            repetir: "No"
+        };
     }
 
-    return {evaluacion, recomendacion, repetir};
+    if(roi < 0){
+        return {
+            evaluacion: "No exitoso",
+            recomendacion: "No escalar, revisar causa",
+            repetir: "No"
+        };
+    }
+
+    if(roi < 0.3){
+        return {
+            evaluacion: "Parcial",
+            recomendacion: "Ajustar variables y validar nuevamente",
+            repetir: "Sí"
+        };
+    }
+
+    return {
+        evaluacion: "Exitoso",
+        recomendacion: "Escalar comercialmente",
+        repetir: "Sí"
+    };
 }
 
 // ===== CALCULAR =====
 function calcular(){
 
-    let rc = parseFloat(rendControl.value) || 0;
-    let rt = parseFloat(rendTratado.value) || 0;
+    let rc = parseFloat(get("rendControl")?.value) || 0;
+    let rt = parseFloat(get("rendTratado")?.value) || 0;
 
-    let precioVal = parseFloat(precio.value) || 0;
-    let costoProd = parseFloat(costoProduccion.value) || 0;
+    let precioVal = parseFloat(get("precio")?.value) || 0;
+    let costoProd = parseFloat(get("costoProduccion")?.value) || 0;
 
-    let semillasVal = parseFloat(semillas.value) || 0;
-    let ins = parseFloat(insumos.value) || 0;
-    let mat = parseFloat(material.value) || 0;
+    let semillasVal = parseFloat(get("semillas")?.value) || 0;
+    let ins = parseFloat(get("insumos")?.value) || 0;
+    let mat = parseFloat(get("material")?.value) || 0;
 
-    let hrs = parseFloat(horas.value) || 0;
-    let costoHr = parseFloat(costoHora.value) || 0;
+    let hrs = parseFloat(get("horas")?.value) || 0;
+    let costoHr = parseFloat(get("costoHora")?.value) || 0;
     let costoHoras = hrs * costoHr;
 
-    let tras = parseFloat(traslados.value) || 0;
-    let otr = parseFloat(otros.value) || 0;
+    let tras = parseFloat(get("traslados")?.value) || 0;
+    let otr = parseFloat(get("otros")?.value) || 0;
 
     let diferencia = rt - rc;
     let porcentaje = rc ? (diferencia/rc)*100 : 0;
@@ -77,21 +87,25 @@ function calcular(){
 
     let decision = evaluar(roi, diferencia);
 
-    kpis.innerHTML = `
-        <div class="kpi">📈 Diferencia: ${diferencia.toFixed(2)}</div>
-        <div class="kpi">📊 Mejora: ${porcentaje.toFixed(2)}%</div>
-        <div class="kpi">💰 Margen: $${margen.toFixed(2)}</div>
-        <div class="kpi">💸 Costo: $${costoTotal.toFixed(2)}</div>
-        <div class="kpi ${roi>=0.3?'green':roi>=0?'yellow':'red'}">
-            ROI: ${(roi*100).toFixed(2)}%
-        </div>
+    let kpisDiv = get("kpis");
 
-        <hr>
+    if(kpisDiv){
+        kpisDiv.innerHTML = `
+            <div class="kpi">📈 Diferencia: ${diferencia.toFixed(2)}</div>
+            <div class="kpi">📊 Mejora: ${porcentaje.toFixed(2)}%</div>
+            <div class="kpi">💰 Margen: $${margen.toFixed(2)}</div>
+            <div class="kpi">💸 Costo: $${costoTotal.toFixed(2)}</div>
+            <div class="kpi ${roi>=0.3?'green':roi>=0?'yellow':'red'}">
+                ROI: ${(roi*100).toFixed(2)}%
+            </div>
 
-        <div class="kpi">📊 Evaluación: <b>${decision.evaluacion}</b></div>
-        <div class="kpi">🧠 Recomendación: ${decision.recomendacion}</div>
-        <div class="kpi">🔁 Repetir ensayo: ${decision.repetir}</div>
-    `;
+            <hr>
+
+            <div class="kpi">📊 Evaluación: <b>${decision.evaluacion}</b></div>
+            <div class="kpi">🧠 Recomendación: ${decision.recomendacion}</div>
+            <div class="kpi">🔁 Repetir ensayo: ${decision.repetir}</div>
+        `;
+    }
 
     window.tmp = {
         diferencia,
@@ -116,30 +130,26 @@ function guardar(){
 
     let data = {
         id: Date.now(),
-        ensayo_id: ensayoSelect.value,
+        ensayo_id: get("ensayoSelect")?.value,
 
-        // resultados
         diferencia: window.tmp.diferencia,
         porcentaje: window.tmp.porcentaje,
         margen: window.tmp.margen,
         costoTotal: window.tmp.costoTotal,
         roi: window.tmp.roi,
 
-        // costos
-        semillas: semillas.value,
-        insumos: insumos.value,
-        material: material.value,
-        horas: horas.value,
-        costoHora: costoHora.value,
+        semillas: get("semillas")?.value,
+        insumos: get("insumos")?.value,
+        material: get("material")?.value,
+        horas: get("horas")?.value,
+        costoHora: get("costoHora")?.value,
         costoHoras: window.tmp.costoHoras,
-        traslados: traslados.value,
-        otros: otros.value,
+        traslados: get("traslados")?.value,
+        otros: get("otros")?.value,
 
-        // mercado
-        precio: precio.value,
-        costoProduccion: costoProduccion.value,
+        precio: get("precio")?.value,
+        costoProduccion: get("costoProduccion")?.value,
 
-        // decisión
         evaluacion: window.tmp.evaluacion,
         recomendacion: window.tmp.recomendacion,
         repetir: window.tmp.repetir,
@@ -157,26 +167,28 @@ function guardar(){
 // ===== RENDER =====
 function render(){
 
+    let lista = get("lista");
+    if(!lista) return;
+
     lista.innerHTML="";
 
     resultados.slice().reverse().forEach(r=>{
 
-        let e = ensayos.find(x=>x.id==r.ensayo_id);
-
+        let e = ensayos.find(x=>x.id==r.ensayo_id) || {};
         let color = r.roi >= 0.3 ? "green" : r.roi >= 0 ? "yellow" : "red";
 
         lista.innerHTML += `
         <div class="card">
 
-        <h3>${e?.id} | ${e?.cultivo} | ${e?.variedad_tratada}</h3>
+        <h3>${e.id || ""} | ${e.cultivo || ""} | ${e.variedad_tratada || ""}</h3>
 
-        <p>📈 Diferencia: ${r.diferencia.toFixed(2)}</p>
-        <p>📊 Mejora: ${r.porcentaje.toFixed(2)}%</p>
+        <p>📈 Diferencia: ${Number(r.diferencia).toFixed(2)}</p>
+        <p>📊 Mejora: ${Number(r.porcentaje).toFixed(2)}%</p>
 
-        <p>💰 Margen: $${r.margen.toFixed(2)}</p>
-        <p>💸 Costo: $${r.costoTotal.toFixed(2)}</p>
+        <p>💰 Margen: $${Number(r.margen).toFixed(2)}</p>
+        <p>💸 Costo: $${Number(r.costoTotal).toFixed(2)}</p>
 
-        <p class="${color}"><b>ROI: ${(r.roi*100).toFixed(2)}%</b></p>
+        <p class="${color}"><b>ROI: ${(Number(r.roi)*100).toFixed(2)}%</b></p>
 
         <hr>
 
@@ -202,11 +214,10 @@ function eliminar(id){
     }
 }
 
-// ===== EXPORTAR EXCEL =====
+// ===== EXPORT =====
 function exportarExcel(){
 
     let data = resultados.map(r => {
-
         let e = ensayos.find(x => x.id == r.ensayo_id) || {};
 
         return {
@@ -244,14 +255,14 @@ function exportarExcel(){
     let wb = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(wb, ws, "Resultados");
-
     XLSX.writeFile(wb, "Resultados_Ensayos.xlsx");
 }
 
 // ===== LIMPIAR =====
 function limpiar(){
     document.querySelectorAll("input").forEach(i=>i.value="");
-    kpis.innerHTML="";
+    let kpis = get("kpis");
+    if(kpis) kpis.innerHTML="";
 }
 
 // INIT
