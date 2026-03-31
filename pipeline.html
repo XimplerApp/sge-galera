@@ -4,6 +4,8 @@
 <title>Pipeline Comercial</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <style>
 body {font-family: Arial; background:#0f172a; color:white; padding:20px;}
 h1 {color:#38bdf8;}
@@ -28,6 +30,7 @@ button {
 
 .save {background:#22c55e;}
 .delete {background:#ef4444;}
+.export {background:#22c55e;}
 
 .kpi {font-size:18px; margin:5px 0;}
 .green {color:#22c55e;}
@@ -36,10 +39,11 @@ button {
 table {
     width:100%;
     border-collapse: collapse;
+    text-align:center; /* 🔥 centrado */
 }
 
 th, td {
-    padding:8px;
+    padding:10px;
     border-bottom:1px solid #334155;
 }
 </style>
@@ -64,6 +68,11 @@ th, td {
 <select id="filtroEnsayo"></select>
 
 <div id="dashboard"></div>
+</div>
+
+<!-- EXPORT -->
+<div class="card">
+<button class="export" onclick="exportarExcel()">📊 Exportar Excel</button>
 </div>
 
 <!-- OPORTUNIDADES -->
@@ -112,9 +121,7 @@ function cargarEnsayos(){
     filtroEnsayo.innerHTML='<option value="">Todos los ensayos</option>';
 
     ensayos.forEach(e=>{
-
         let texto = `${e.id} | ${e.cultivo} | ${e.variedad_tratada} | ${e.productor}`;
-
         idEnsayo.innerHTML += `<option value="${e.id}">${texto}</option>`;
         filtroEnsayo.innerHTML += `<option value="${e.id}">${texto}</option>`;
     });
@@ -130,7 +137,8 @@ function guardar(){
         area: +area.value || 0,
         leads: +leads.value || 0,
         ventaEstimada: +ventaEstimada.value || 0,
-        ventaCerrada: +ventaCerrada.value || 0
+        ventaCerrada: +ventaCerrada.value || 0,
+        fecha: new Date().toLocaleString()
     };
 
     oportunidades.push(data);
@@ -157,6 +165,7 @@ function calcularDashboard(){
 
     let productores = lista.filter(o=>o.interesado=="Sí").length;
     let leadsTotal = lista.reduce((a,b)=>a+b.leads,0);
+    let areaTotal = lista.reduce((a,b)=>a+b.area,0);
     let estimado = lista.reduce((a,b)=>a+b.ventaEstimada,0);
     let ventas = lista.reduce((a,b)=>a+b.ventaCerrada,0);
 
@@ -168,7 +177,7 @@ function calcularDashboard(){
     dashboard.innerHTML = `
     <div class="kpi">👨‍🌾 Productores interesados: ${productores}</div>
     <div class="kpi">📊 Leads generados: ${leadsTotal}</div>
-    <div class="kpi">🌱 Área potencial: ${lista.reduce((a,b)=>a+b.area,0)} ha</div>
+    <div class="kpi">🌱 Área potencial: ${areaTotal} ha</div>
     <div class="kpi">💰 Venta estimada: $${estimado.toFixed(2)}</div>
     <div class="kpi">💵 Venta cerrada: $${ventas.toFixed(2)}</div>
     <div class="kpi">📈 Conversión: ${conversion.toFixed(2)}%</div>
@@ -212,6 +221,36 @@ function render(){
     });
 
     calcularDashboard();
+}
+
+// ===== EXPORT EXCEL =====
+function exportarExcel(){
+
+    let data = oportunidades.map(o => {
+
+        let e = ensayos.find(x => x.id == o.ensayo) || {};
+
+        return {
+            "ID Ensayo": e.id || "",
+            "Cultivo": e.cultivo || "",
+            "Variedad": e.variedad_tratada || "",
+            "Productor": e.productor || "",
+
+            "Productor interesado": o.interesado,
+            "Área potencial": o.area,
+            "Leads generados": o.leads,
+            "Venta estimada": o.ventaEstimada,
+            "Venta cerrada": o.ventaCerrada,
+            "Fecha": o.fecha
+        };
+    });
+
+    let ws = XLSX.utils.json_to_sheet(data);
+    let wb = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(wb, ws, "Pipeline");
+
+    XLSX.writeFile(wb, "Pipeline_Comercial.xlsx");
 }
 
 // ===== FILTRO =====
