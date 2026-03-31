@@ -28,7 +28,6 @@ button {
 
 .save {background:#22c55e;}
 .delete {background:#ef4444;}
-.export {background:#22c55e;}
 
 .kpi {font-size:18px; margin:5px 0;}
 .green {color:#22c55e;}
@@ -58,31 +57,12 @@ th, td {
 
 <h1>📈 Pipeline Comercial de Ensayos</h1>
 
-<!-- REGISTRO -->
-<div class="card">
-
-<h2>Nuevo Registro</h2>
-
-<select id="idEnsayo"></select>
-
-<input id="productores" placeholder="Productores interesados">
-<input id="leads" placeholder="Leads generados">
-<input id="area" placeholder="Área potencial (ha)">
-<input id="ventaEstimada" placeholder="Venta estimada $">
-<input id="ventaCerrada" placeholder="Venta cerrada $">
-
-<select id="recompra">
-<option value="No">Recompra: No</option>
-<option value="Sí">Recompra: Sí</option>
-</select>
-
-<button class="save" onclick="guardarPipeline()">Guardar</button>
-
-</div>
-
 <!-- DASHBOARD -->
 <div class="card">
-<h2>📊 Dashboard Comercial</h2>
+<h2>📊 Dashboard por Ensayo</h2>
+
+<select id="filtroEnsayo"></select>
+
 <div id="dashboard"></div>
 </div>
 
@@ -91,28 +71,29 @@ th, td {
 
 <h2>📋 Oportunidades Comerciales</h2>
 
-<select id="idEnsayoO"></select>
+<select id="idEnsayo"></select>
 
 <select id="interesado">
 <option value="Sí">Productor interesado: Sí</option>
 <option value="No">Productor interesado: No</option>
 </select>
 
-<input id="areaO" placeholder="Área potencial">
-<input id="leadsO" placeholder="Leads generados">
-<input id="ventaEstimadaO" placeholder="Venta estimada">
-<input id="ventaCerradaO" placeholder="Venta cerrada">
+<input id="area" placeholder="Área potencial (ha)">
+<input id="leads" placeholder="Leads generados">
+<input id="ventaEstimada" placeholder="Venta estimada $">
+<input id="ventaCerrada" placeholder="Venta cerrada $">
 
-<button class="save" onclick="guardarOportunidad()">Agregar</button>
+<button class="save" onclick="guardar()">Agregar</button>
 
-<table id="tablaOportunidades">
+<table id="tabla">
 <tr>
-<th>ID</th>
+<th>Ensayo</th>
 <th>Interesado</th>
 <th>Área</th>
 <th>Leads</th>
 <th>Venta Estimada</th>
 <th>Venta Cerrada</th>
+<th></th>
 </tr>
 </table>
 
@@ -122,115 +103,123 @@ th, td {
 
 // ===== DATA =====
 let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
-let pipeline = JSON.parse(localStorage.getItem("pipeline")) || [];
 let oportunidades = JSON.parse(localStorage.getItem("oportunidades")) || [];
 
 // ===== CARGAR ENSAYOS =====
 function cargarEnsayos(){
 
     idEnsayo.innerHTML="";
-    idEnsayoO.innerHTML="";
+    filtroEnsayo.innerHTML='<option value="">Todos los ensayos</option>';
 
-    ensayos.forEach(e => {
+    ensayos.forEach(e=>{
 
         let texto = `${e.id} | ${e.cultivo} | ${e.variedad_tratada} | ${e.productor}`;
 
         idEnsayo.innerHTML += `<option value="${e.id}">${texto}</option>`;
-        idEnsayoO.innerHTML += `<option value="${e.id}">${texto}</option>`;
+        filtroEnsayo.innerHTML += `<option value="${e.id}">${texto}</option>`;
     });
 }
 
-// ===== GUARDAR PIPELINE =====
-function guardarPipeline(){
+// ===== GUARDAR =====
+function guardar(){
 
     let data = {
         id: Date.now(),
         ensayo: idEnsayo.value,
-        productores: +productores.value || 0,
-        leads: +leads.value || 0,
-        area: +area.value || 0,
-        ventaEstimada: +ventaEstimada.value || 0,
-        ventaCerrada: +ventaCerrada.value || 0,
-        recompra: recompra.value,
-        fecha: new Date().toLocaleString()
-    };
-
-    pipeline.push(data);
-    localStorage.setItem("pipeline", JSON.stringify(pipeline));
-
-    calcularDashboard();
-}
-
-// ===== DASHBOARD =====
-function calcularDashboard(){
-
-    let totalEnsayos = pipeline.length;
-    let totalEstimado = pipeline.reduce((a,b)=>a+b.ventaEstimada,0);
-    let totalVentas = pipeline.reduce((a,b)=>a+b.ventaCerrada,0);
-
-    let conversion = totalEstimado > 0 ? (totalVentas/totalEstimado)*100 : 0;
-
-    let clase = conversion >= 25 ? "green" : "red";
-    let texto = conversion >= 25 ? "Exitoso" : "Bajo desempeño";
-
-    dashboard.innerHTML = `
-    <div class="kpi">Ensayos: ${totalEnsayos}</div>
-    <div class="kpi">Venta Estimada: $${totalEstimado.toFixed(2)}</div>
-    <div class="kpi">Venta Cerrada: $${totalVentas.toFixed(2)}</div>
-    <div class="kpi">Conversión: ${conversion.toFixed(2)}%</div>
-    <div class="kpi ${clase}">Evaluación: ${texto}</div>
-    `;
-}
-
-// ===== OPORTUNIDADES =====
-function guardarOportunidad(){
-
-    let data = {
-        id: idEnsayoO.value,
         interesado: interesado.value,
-        area: areaO.value,
-        leads: leadsO.value,
-        ventaEstimada: ventaEstimadaO.value,
-        ventaCerrada: ventaCerradaO.value
+        area: +area.value || 0,
+        leads: +leads.value || 0,
+        ventaEstimada: +ventaEstimada.value || 0,
+        ventaCerrada: +ventaCerrada.value || 0
     };
 
     oportunidades.push(data);
     localStorage.setItem("oportunidades", JSON.stringify(oportunidades));
 
-    cargarTabla();
+    render();
 }
 
-function cargarTabla(){
+// ===== ELIMINAR =====
+function eliminar(id){
+    oportunidades = oportunidades.filter(o=>o.id!=id);
+    localStorage.setItem("oportunidades", JSON.stringify(oportunidades));
+    render();
+}
 
-    tablaOportunidades.innerHTML = `
+// ===== DASHBOARD =====
+function calcularDashboard(){
+
+    let lista = oportunidades;
+
+    if(filtroEnsayo.value){
+        lista = lista.filter(o=>o.ensayo == filtroEnsayo.value);
+    }
+
+    let productores = lista.filter(o=>o.interesado=="Sí").length;
+    let leadsTotal = lista.reduce((a,b)=>a+b.leads,0);
+    let estimado = lista.reduce((a,b)=>a+b.ventaEstimada,0);
+    let ventas = lista.reduce((a,b)=>a+b.ventaCerrada,0);
+
+    let conversion = estimado > 0 ? (ventas/estimado)*100 : 0;
+
+    let clase = conversion >= 25 ? "green" : "red";
+    let texto = conversion >= 25 ? "Exitoso" : "Bajo desempeño";
+
+    dashboard.innerHTML = `
+    <div class="kpi">👨‍🌾 Productores interesados: ${productores}</div>
+    <div class="kpi">📊 Leads generados: ${leadsTotal}</div>
+    <div class="kpi">🌱 Área potencial: ${lista.reduce((a,b)=>a+b.area,0)} ha</div>
+    <div class="kpi">💰 Venta estimada: $${estimado.toFixed(2)}</div>
+    <div class="kpi">💵 Venta cerrada: $${ventas.toFixed(2)}</div>
+    <div class="kpi">📈 Conversión: ${conversion.toFixed(2)}%</div>
+    <div class="kpi ${clase}">Evaluación: ${texto}</div>
+    `;
+}
+
+// ===== TABLA =====
+function render(){
+
+    tabla.innerHTML = `
     <tr>
-    <th>ID</th>
+    <th>Ensayo</th>
     <th>Interesado</th>
     <th>Área</th>
     <th>Leads</th>
     <th>Venta Estimada</th>
     <th>Venta Cerrada</th>
+    <th></th>
     </tr>
     `;
 
-    oportunidades.forEach(o=>{
-        tablaOportunidades.innerHTML += `
+    let lista = oportunidades;
+
+    if(filtroEnsayo.value){
+        lista = lista.filter(o=>o.ensayo == filtroEnsayo.value);
+    }
+
+    lista.forEach(o=>{
+        tabla.innerHTML += `
         <tr>
-        <td>${o.id}</td>
+        <td>${o.ensayo}</td>
         <td>${o.interesado}</td>
         <td>${o.area}</td>
         <td>${o.leads}</td>
         <td>$${o.ventaEstimada}</td>
         <td>$${o.ventaCerrada}</td>
+        <td><button class="delete" onclick="eliminar(${o.id})">🗑</button></td>
         </tr>
         `;
     });
+
+    calcularDashboard();
 }
+
+// ===== FILTRO =====
+filtroEnsayo.addEventListener("change", render);
 
 // ===== INIT =====
 cargarEnsayos();
-calcularDashboard();
-cargarTabla();
+render();
 
 </script>
 
