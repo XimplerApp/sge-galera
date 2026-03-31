@@ -40,10 +40,13 @@ button {
 
 <body>
 
+<!-- 🔝 HEADER COMPLETO -->
 <div style="display:flex; gap:10px; margin-bottom:20px;">
   <a href="index.html"><button>📋 Ensayos</button></a>
   <a href="bitacora.html"><button>📸 Bitácora</button></a>
   <a href="resultados.html"><button>📊 Resultados</button></a>
+  <a href="pipeline.html"><button>🌱 Pipeline</button></a>
+  <a href="tablero.html"><button>🧠 Tablero</button></a>
 </div>
 
 <h1>📊 Resultados de Ensayos</h1>
@@ -107,7 +110,7 @@ function cargarEnsayos(){
     });
 }
 
-// ===== DECISIÓN =====
+// ===== MOTOR DECISIÓN =====
 function evaluar(roi, diferencia){
 
     if(diferencia < 0){
@@ -164,7 +167,7 @@ function calcular(){
     let diferencia = rt - rc;
     let porcentaje = rc ? (diferencia/rc)*100 : 0;
 
-    // 🔥 FIX UNIDADES (TON → KG)
+    // 🔥 FIX UNIDADES
     let diferenciaKg = diferencia * 1000;
 
     let margenUnitario = precioVal - costoProd;
@@ -239,7 +242,7 @@ function render(){
         lista.innerHTML += `
         <div class="card">
 
-        <h3>${e.id || ""} | ${e.cultivo || ""}</h3>
+        <h3>${e.id || ""} | ${e.cultivo || ""} | ${e.variedad_tratada || ""}</h3>
 
         <p>📈 Diferencia: ${r.diferencia.toFixed(2)} ton</p>
         <p>📊 Mejora: ${r.porcentaje.toFixed(2)}%</p>
@@ -269,25 +272,38 @@ function eliminar(id){
     render();
 }
 
-// ===== EXPORT =====
+// ===== EXPORT EXCEL COMPLETO =====
 function exportarExcel(){
 
-    let data = resultados.map(r => ({
-        "Diferencia (ton)": r.diferencia,
-        "% Mejora": r.porcentaje,
-        "Margen": r.margen,
-        "Costo Total": r.costoTotal,
-        "ROI": r.roi,
-        "Evaluación": r.evaluacion,
-        "Recomendación": r.recomendacion,
-        "Repetir": r.repetir,
-        "Fecha": r.fecha
-    }));
+    let data = resultados.map(r => {
+
+        let e = ensayos.find(x => x.id == r.ensayo_id) || {};
+
+        return {
+            "ID Ensayo": e.id || "",
+            "Cultivo": e.cultivo || "",
+            "Variedad": e.variedad_tratada || "",
+
+            "Diferencia (ton)": r.diferencia,
+            "% Mejora": r.porcentaje,
+            "Margen": r.margen,
+            "Costo Total": r.costoTotal,
+            "ROI": r.roi,
+
+            "Evaluación": r.evaluacion,
+            "Recomendación": r.recomendacion,
+            "Repetir": r.repetir,
+
+            "Fecha": r.fecha
+        };
+    });
 
     let ws = XLSX.utils.json_to_sheet(data);
     let wb = XLSX.utils.book_new();
+
     XLSX.utils.book_append_sheet(wb, ws, "Resultados");
-    XLSX.writeFile(wb, "Resultados.xlsx");
+
+    XLSX.writeFile(wb, "Resultados_Ensayos.xlsx");
 }
 
 // ===== LIMPIAR =====
