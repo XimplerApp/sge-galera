@@ -72,7 +72,8 @@ button {
 <input id="otros" placeholder="Otros $">
 
 <h3>Datos de Mercado</h3>
-<input id="precio" placeholder="Precio por kg">
+<input id="precio" placeholder="Precio de venta por kg">
+<input id="costoProduccion" placeholder="Costo producción por kg">
 
 <button onclick="calcular()">Calcular ROI</button>
 
@@ -120,7 +121,9 @@ function calcular(){
 
     let rc = parseFloat(rendControl.value) || 0;
     let rt = parseFloat(rendTratado.value) || 0;
+
     let precioVal = parseFloat(precio.value) || 0;
+    let costoProd = parseFloat(costoProduccion.value) || 0;
 
     let semillasVal = parseFloat(semillas.value) || 0;
     let ins = parseFloat(insumos.value) || 0;
@@ -137,17 +140,18 @@ function calcular(){
     let diferencia = rt - rc;
     let porcentaje = rc ? (diferencia/rc)*100 : 0;
 
-    let ingreso = diferencia * precioVal;
+    let margenUnitario = precioVal - costoProd;
+    let margen = diferencia * margenUnitario;
 
-    let costo = semillasVal + ins + mat + costoHoras + tras + otr;
+    let costoTotal = semillasVal + ins + mat + costoHoras + tras + otr;
 
-    let roi = costo ? (ingreso - costo) / costo : 0;
+    let roi = costoTotal ? (margen - costoTotal) / costoTotal : 0;
 
     kpis.innerHTML = `
         <div class="kpi">📈 Diferencia: ${diferencia.toFixed(2)}</div>
         <div class="kpi">📊 Mejora %: ${porcentaje.toFixed(2)}%</div>
-        <div class="kpi">💰 Ingreso adicional: $${ingreso.toFixed(2)}</div>
-        <div class="kpi">💸 Costo total: $${costo.toFixed(2)}</div>
+        <div class="kpi">💰 Margen adicional: $${margen.toFixed(2)}</div>
+        <div class="kpi">💸 Costo total: $${costoTotal.toFixed(2)}</div>
         <div class="kpi">⏱ Costo horas: $${costoHoras.toFixed(2)}</div>
         <div class="kpi ${roi>=0.3?'green':'red'}">
             ROI: ${(roi*100).toFixed(2)}%
@@ -155,8 +159,9 @@ function calcular(){
     `;
 
     window.tmp = {
-        diferencia, porcentaje, ingreso, costo, roi,
-        costoHoras
+        diferencia, porcentaje,
+        margen, costoTotal,
+        roi, costoHoras
     };
 }
 
@@ -166,6 +171,11 @@ function guardar(){
     if(!window.tmp){
         alert("Primero calcula el ROI");
         return;
+    }
+
+    // asegurar cálculo correcto
+    if(!window.tmp.costoHoras){
+        calcular();
     }
 
     let data = {
@@ -188,6 +198,7 @@ function guardar(){
         otros: otros.value,
 
         precio: precio.value,
+        costoProduccion: costoProduccion.value,
 
         ...window.tmp,
 
@@ -196,7 +207,6 @@ function guardar(){
     };
 
     resultados.push(data);
-
     localStorage.setItem("resultados", JSON.stringify(resultados));
 
     limpiar();
@@ -261,15 +271,16 @@ function exportarExcel(){
             "Semillas": r.semillas,
             "Insumos": r.insumos,
             "Material": r.material,
-            "Horas": r.horas,
-            "Costo Hora": r.costoHora,
-            "Costo Horas": r.costoHoras,
+            "Horas Técnico": r.horas,
+            "Costo por Hora": r.costoHora,
+            "Costo Total Horas": r.costoHoras,
             "Traslados": r.traslados,
             "Otros": r.otros,
-            "Costo Total": r.costo,
+            "Costo Total": r.costoTotal,
 
-            "Precio": r.precio,
-            "Ingreso": r.ingreso,
+            "Precio Venta": r.precio,
+            "Costo Producción": r.costoProduccion,
+            "Margen": r.margen,
             "ROI": r.roi,
 
             "Evaluación": r.evaluacion,
