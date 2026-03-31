@@ -16,20 +16,22 @@ h1 {color:#38bdf8;}
 .yellow {color:#facc15;}
 .red {color:#ef4444;}
 #map {height:400px; border-radius:10px;}
-table {width:100%; margin-top:10px;}
-td,th {padding:8px; border-bottom:1px solid #334155;}
+table {width:100%; margin-top:10px; border-collapse:collapse;}
+td,th {padding:10px; border-bottom:1px solid #334155; text-align:left;}
+th {background:#020617;}
 </style>
 </head>
 
 <body>
 
 <!-- HEADER -->
-<div style="display:flex; gap:10px; margin-bottom:20px;">
+<div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
   <a href="index.html"><button>📋 Ensayos</button></a>
   <a href="bitacora.html"><button>📸 Bitácora</button></a>
   <a href="resultados.html"><button>📊 Resultados</button></a>
   <a href="pipeline.html"><button>🌱 Pipeline</button></a>
   <a href="tablero.html"><button>🧠 Tablero</button></a>
+  <a href="inteligencia.html"><button>🚀 Inteligencia</button></a>
 </div>
 
 <h1>🧠 Inteligencia de Mercado</h1>
@@ -46,22 +48,32 @@ td,th {padding:8px; border-bottom:1px solid #334155;}
 <table id="ranking"></table>
 </div>
 
+<!-- TABLA REGION -->
+<div class="card">
+<h2>🌍 Mapa de Ensayos por Región</h2>
+
+<table>
+<tr>
+<th>Región</th>
+<th>Estado</th>
+<th>Variedad</th>
+<th>ROI</th>
+<th>Status</th>
+</tr>
+
+<tr><td>Noroeste</td><td>Sinaloa</td><td>Dumas</td><td>2.8</td><td>Activo</td></tr>
+<tr><td>Bajío</td><td>Guanajuato</td><td>Ibérico</td><td>3.5</td><td>Terminado</td></tr>
+<tr><td>Occidente</td><td>Jalisco</td><td>E20.318</td><td>1.4</td><td>Activo</td></tr>
+<tr><td>Norte</td><td>Chihuahua</td><td>Dumas</td><td>0.9</td><td>Experimental</td></tr>
+<tr><td>Sureste</td><td>Yucatán</td><td>Ibérico</td><td>2.1</td><td>Activo</td></tr>
+
+</table>
+</div>
+
 <!-- RICE -->
 <div class="card">
 <h2>⚡ Motor de Prioridad (RICE)</h2>
 <div id="rice"></div>
-</div>
-
-<!-- ALERTAS -->
-<div class="card">
-<h2>🚨 Reglas de Control</h2>
-<div id="alertas"></div>
-</div>
-
-<!-- INSIGHTS -->
-<div class="card">
-<h2>🧠 Insights Automáticos</h2>
-<div id="insights"></div>
 </div>
 
 <script>
@@ -88,9 +100,9 @@ bitacora.forEach(b=>{
 
     L.marker([b.lat,b.lng]).addTo(map)
     .bindPopup(`
-      <b>${e.variedad_tratada}</b><br>
-      Cultivo: ${e.cultivo}<br>
-      Estado: ${e.estado}<br>
+      <b>${e.variedad_tratada || "N/A"}</b><br>
+      Cultivo: ${e.cultivo || ""}<br>
+      Estado: ${e.estado || ""}<br>
       ROI: ${(r.roi*100||0).toFixed(2)}%<br>
       Leads: ${leads}
     `);
@@ -105,7 +117,6 @@ resultados.forEach(r=>{
   if(!e) return;
 
   let o = oportunidades.filter(x=>x.ensayo==r.ensayo_id);
-
   let ventas = o.reduce((a,b)=>a+b.ventaCerrada,0);
 
   if(!variedades[e.variedad_tratada]){
@@ -125,7 +136,7 @@ let rankingHTML = `
 <tr>
 <th>Variedad</th>
 <th>Ensayos</th>
-<th>ROI</th>
+<th>ROI Promedio</th>
 <th>Ventas</th>
 <th>Adopción</th>
 </tr>
@@ -142,7 +153,7 @@ Object.entries(variedades).forEach(([v,data])=>{
     <td>${v}</td>
     <td>${data.ensayos}</td>
     <td>${(roiProm*100).toFixed(2)}%</td>
-    <td>$${data.ventas}</td>
+    <td>$${data.ventas.toFixed(2)}</td>
     <td>${adopcion}</td>
   </tr>`;
 });
@@ -163,62 +174,11 @@ ensayos.forEach(e=>{
 
   riceHTML += `
   <div class="kpi">
-  ${e.variedad_tratada} → Score: ${score.toFixed(2)}
+  🌱 ${e.variedad_tratada || "Sin variedad"} → Score: ${score.toFixed(2)}
   </div>`;
 });
 
 document.getElementById("rice").innerHTML = riceHTML;
-
-
-// ===== ALERTAS =====
-let alertasHTML = "";
-
-resultados.forEach(r=>{
-
-  if(r.roi < 0){
-    alertasHTML += `<div class="red">❌ ROI negativo → No repetir</div>`;
-  }
-
-});
-
-oportunidades.forEach(o=>{
-  if(o.leads == 0){
-    alertasHTML += `<div class="yellow">⚠️ Sin leads → revisar zona</div>`;
-  }
-});
-
-document.getElementById("alertas").innerHTML = alertasHTML;
-
-
-// ===== INSIGHTS =====
-let insightsHTML = "";
-
-Object.entries(variedades).forEach(([v,data])=>{
-
-  if(data.ventas > 100000){
-    insightsHTML += `
-    <div class="green">
-    🚀 ${v} muestra alta adopción → ESCALAR
-    </div>`;
-  }
-
-  if(data.ensayos > 3 && data.ventas < 20000){
-    insightsHTML += `
-    <div class="yellow">
-    ⚠️ ${v} tiene evidencia pero baja venta → EXPANDIR
-    </div>`;
-  }
-
-  if(data.ventas < 10000){
-    insightsHTML += `
-    <div class="red">
-    ❌ ${v} bajo desempeño → DESCARTAR
-    </div>`;
-  }
-
-});
-
-document.getElementById("insights").innerHTML = insightsHTML;
 
 </script>
 
