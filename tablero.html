@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Tablero Operativo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {font-family: Arial; background:#0f172a; color:white; padding:20px;}
+h1 {color:#38bdf8;}
+
+.card {background:#1e293b; padding:20px; border-radius:10px; margin-bottom:20px;}
+
+.kpi {font-size:18px; margin:6px 0;}
+.green {color:#22c55e;}
+.red {color:#ef4444;}
+.yellow {color:#facc15;}
+</style>
+</head>
+
+<body>
+
+<!-- MENU -->
+<div style="display:flex; gap:10px; margin-bottom:20px;">
+  <a href="index.html"><button>📋 Ensayos</button></a>
+  <a href="bitacora.html"><button>📸 Bitácora</button></a>
+  <a href="resultados.html"><button>📊 Resultados</button></a>
+  <a href="pipeline.html"><button>📈 Pipeline</button></a>
+  <a href="tablero.html"><button>🧠 Tablero</button></a>
+</div>
+
+<h1>🧠 Tablero Operativo</h1>
+
+<!-- KPIs TECNICOS -->
+<div class="card">
+<h2>🔬 KPIs Técnicos</h2>
+<div id="kpiTecnico"></div>
+</div>
+
+<!-- KPIs COMERCIALES -->
+<div class="card">
+<h2>💰 KPIs Comerciales</h2>
+<div id="kpiComercial"></div>
+</div>
+
+<!-- KPIs ESTRATEGICOS -->
+<div class="card">
+<h2>🚀 KPIs Estratégicos</h2>
+<div id="kpiEstrategico"></div>
+</div>
+
+<script>
+
+// ===== DATA =====
+let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
+let resultados = JSON.parse(localStorage.getItem("resultados")) || [];
+let oportunidades = JSON.parse(localStorage.getItem("oportunidades")) || [];
+
+// ===== KPIs TECNICOS =====
+function calcularTecnicos(){
+
+    let total = ensayos.length;
+
+    let activos = ensayos.length; // puedes refinar después
+
+    let rendProm = resultados.length ?
+        resultados.reduce((a,b)=>a+(b.diferencia||0),0)/resultados.length : 0;
+
+    let mejoraProm = resultados.length ?
+        resultados.reduce((a,b)=>a+(b.porcentaje||0),0)/resultados.length : 0;
+
+    kpiTecnico.innerHTML = `
+    <div class="kpi">% Ensayos activos: ${total ? ((activos/total)*100).toFixed(2):0}%</div>
+    <div class="kpi">🌾 Rendimiento promedio: ${rendProm.toFixed(2)}</div>
+    <div class="kpi">📈 Mejora promedio: ${mejoraProm.toFixed(2)}%</div>
+    `;
+}
+
+// ===== KPIs COMERCIALES =====
+function calcularComerciales(){
+
+    let ensayosTot = ensayos.length || 1;
+
+    let ventas = oportunidades.filter(o=>o.ventaCerrada>0).length;
+    let conversion = (ventas / ensayosTot) * 100;
+
+    let leads = oportunidades.reduce((a,b)=>a+b.leads,0);
+    let leadsPorEnsayo = leads / ensayosTot;
+
+    let roiProm = resultados.length ?
+        resultados.reduce((a,b)=>a+(b.roi||0),0)/resultados.length : 0;
+
+    let roiClass = roiProm >= 0.3 ? "green" : "red";
+    let convClass = conversion >= 25 ? "green" : "red";
+
+    kpiComercial.innerHTML = `
+    <div class="kpi ${convClass}">📈 Ensayo → Venta: ${conversion.toFixed(2)}%</div>
+    <div class="kpi">📊 Leads por ensayo: ${leadsPorEnsayo.toFixed(2)}</div>
+    <div class="kpi ${roiClass}">💰 ROI promedio: ${(roiProm*100).toFixed(2)}%</div>
+    `;
+}
+
+// ===== KPIs ESTRATEGICOS =====
+function calcularEstrategicos(){
+
+    let adopcion = oportunidades.reduce((a,b)=>a+b.ventaCerrada,0);
+
+    let speed = resultados.length ?
+        resultados.reduce((a,b)=>a+1,0)/resultados.length : 0;
+
+    let roiCultivo = {};
+
+    resultados.forEach(r=>{
+        let e = ensayos.find(x=>x.id==r.ensayo_id);
+        if(e){
+            roiCultivo[e.cultivo] = (roiCultivo[e.cultivo]||0) + (r.roi||0);
+        }
+    });
+
+    let textoCultivos = Object.entries(roiCultivo)
+        .map(([k,v])=>`${k}: ${(v*100).toFixed(2)}%`)
+        .join("<br>");
+
+    kpiEstrategico.innerHTML = `
+    <div class="kpi">🌱 Adopción varietal (ventas): $${adopcion.toFixed(2)}</div>
+    <div class="kpi">⏱ Speed to Market: ${speed.toFixed(2)} ciclos</div>
+    <div class="kpi">📊 ROI por cultivo:<br>${textoCultivos}</div>
+    `;
+}
+
+// ===== INIT =====
+calcularTecnicos();
+calcularComerciales();
+calcularEstrategicos();
+
+</script>
+
+</body>
+</html>
