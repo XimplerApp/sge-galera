@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Resultados de Ensayos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {font-family: Arial; background:#0f172a; color:white; padding:20px;}
+h1 {color:#38bdf8;}
+.card {background:#1e293b; padding:20px; border-radius:10px; margin-bottom:20px;}
+
+input, select {
+    width:100%;
+    padding:10px;
+    margin:6px 0;
+    border-radius:6px;
+    border:none;
+}
+
+button {
+    padding:10px;
+    margin-top:10px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.save {background:#22c55e;}
+.edit {background:#f59e0b;}
+.delete {background:#ef4444;}
+
+.kpi {font-size:18px; margin:5px 0;}
+.green {color:#22c55e;}
+.red {color:#ef4444;}
+</style>
+</head>
+
+<body>
+
+<div style="display:flex; gap:10px; margin-bottom:20px;">
+  <a href="index.html"><button>📋 Ensayos</button></a>
+  <a href="bitacora.html"><button>📸 Bitácora</button></a>
+</div>
+
+<h1>📊 Resultados de Ensayos</h1>
+
+<!-- FORM -->
+<div class="card">
+
+<h2 id="modo">Nuevo Resultado</h2>
+
+<select id="ensayoSelect"></select>
+
+<h3>Resultados Técnicos</h3>
+<input id="rendControl" placeholder="Rendimiento Control (kg/ha)">
+<input id="rendTratado" placeholder="Rendimiento Tratado (kg/ha)">
+<input id="calidad" placeholder="Calidad comercial">
+<input id="plaga" placeholder="% incidencia plaga">
+
+<h3>Costos</h3>
+<input id="insumos" placeholder="Insumos $">
+<input id="horas" placeholder="Horas técnico $">
+<input id="traslados" placeholder="Traslados $">
+<input id="otros" placeholder="Otros $">
+
+<h3>Datos de Mercado</h3>
+<input id="precio" placeholder="Precio por kg">
+
+<button onclick="calcular()">Calcular ROI</button>
+
+<div id="kpis"></div>
+
+<select id="evaluacion">
+<option>Exitoso</option>
+<option>Parcial</option>
+<option>No exitoso</option>
+</select>
+
+<button class="save" onclick="guardar()">Guardar Resultado</button>
+
+</div>
+
+<!-- LISTADO -->
+<div class="card">
+<h2>Resultados Guardados</h2>
+<div id="lista"></div>
+</div>
+
+<script>
+
+let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
+let resultados = JSON.parse(localStorage.getItem("resultados")) || [];
+
+let editId = null;
+
+// ===== CARGAR ENSAYOS =====
+function cargarEnsayos(){
+    ensayoSelect.innerHTML="";
+    ensayos.forEach(e=>{
+        ensayoSelect.innerHTML += `
+        <option value="${e.id}">
+        ${e.id} | ${e.cultivo} | ${e.variedad_tratada} | ${e.productor}
+        </option>`;
+    });
+}
+
+// ===== CALCULAR =====
+function calcular(){
+
+    let rc = parseFloat(rendControl.value) || 0;
+    let rt = parseFloat(rendTratado.value) || 0;
+    let precioVal = parseFloat(precio.value) || 0;
+
+    let ins = parseFloat(insumos.value) || 0;
+    let hrs = parseFloat(horas.value) || 0;
+    let tras = parseFloat(traslados.value) || 0;
+    let otr = parseFloat(otros.value) || 0;
+
+    let diferencia = rt - rc;
+    let porcentaje = rc ? (diferencia/rc)*100 : 0;
+
+    let ingreso = diferencia * precioVal;
+    let costo = ins + hrs + tras + otr;
+
+    let roi = costo ? (ingreso - costo) / costo : 0;
+
+    kpis.innerHTML = `
+        <div class="kpi">📈 Diferencia: ${diferencia.toFixed(2)}</div>
+        <div class="kpi">📊 Mejora %: ${porcentaje.toFixed(2)}%</div>
+        <div class="kpi">💰 Ingreso adicional: $${ingreso.toFixed(2)}</div>
+        <div class="kpi">💸 Costo total: $${costo.toFixed(2)}</div>
+        <div class="kpi ${roi>=0.3?'green':'red'}">
+            ROI: ${(roi*100).toFixed(2)}%
+        </div>
+    `;
+
+    window.tmp = {diferencia, porcentaje, ingreso, costo, roi};
+}
+
+// ===== GUARDAR =====
+function guardar(){
+
+    if(!window.tmp){
+        alert("Primero calcula el ROI");
+        return;
+    }
+
+    let data = {
+        id: editId || Date.now(),
+        ensayo_id: ensayoSelect.value,
+
+        rend_control: rendControl.value,
+        rend_tratado: rendTratado.value,
+        calidad: calidad.value,
+        plaga: plaga.value,
+
+        insumos: insumos.value,
+        horas: horas.value,
+        traslados: traslados.value,
+        otros: otros.value,
+
+        precio: precio.value,
+
+        ...window.tmp,
+
+        evaluacion: evaluacion.value,
+        fecha: new Date().toLocaleString()
+    };
+
+    if(editId){
+        resultados = resultados.map(r=>r.id==editId?data:r);
+    } else {
+        resultados.push(data);
+    }
+
+    localStorage.setItem("resultados", JSON.stringify(resultados));
+
+    limpiar();
+    render();
+}
+
+// ===== RENDER =====
+function render(){
+
+    lista.innerHTML="";
+
+    resultados.slice().reverse().forEach(r=>{
+
+        let e = ensayos.find(x=>x.id==r.ensayo_id);
+
+        lista.innerHTML += `
+        <div class="card">
+
+        <h3>${e?.id} | ${e?.cultivo} | ${e?.variedad_tratada}</h3>
+
+        <p>📈 ${r.diferencia} kg</p>
+        <p>📊 ${r.porcentaje.toFixed(2)}%</p>
+        <p>💰 ROI: ${(r.roi*100).toFixed(2)}%</p>
+
+        <p>Resultado: ${r.evaluacion}</p>
+        <p>${r.fecha}</p>
+
+        <button class="edit" onclick="editar(${r.id})">✏️</button>
+        <button class="delete" onclick="eliminar(${r.id})">🗑</button>
+
+        </div>
+        `;
+    });
+}
+
+// ===== EDITAR =====
+function editar(id){
+    let r = resultados.find(x=>x.id==id);
+
+    editId = id;
+    modo.innerText="Editar Resultado";
+
+    ensayoSelect.value = r.ensayo_id;
+
+    rendControl.value = r.rend_control;
+    rendTratado.value = r.rend_tratado;
+    calidad.value = r.calidad;
+    plaga.value = r.plaga;
+
+    insumos.value = r.insumos;
+    horas.value = r.horas;
+    traslados.value = r.traslados;
+    otros.value = r.otros;
+
+    precio.value = r.precio;
+
+    calcular();
+}
+
+// ===== ELIMINAR =====
+function eliminar(id){
+    if(confirm("Eliminar?")){
+        resultados = resultados.filter(r=>r.id!=id);
+        localStorage.setItem("resultados", JSON.stringify(resultados));
+        render();
+    }
+}
+
+// ===== LIMPIAR =====
+function limpiar(){
+    editId=null;
+    modo.innerText="Nuevo Resultado";
+
+    document.querySelectorAll("input").forEach(i=>i.value="");
+    kpis.innerHTML="";
+}
+
+// INIT
+cargarEnsayos();
+render();
+
+</script>
+
+</body>
+</html>
