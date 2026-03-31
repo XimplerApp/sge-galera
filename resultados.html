@@ -259,20 +259,59 @@ function eliminar(id){
 // ===== EXPORT =====
 function exportarExcel(){
 
-    let data = resultados.map(r => ({
-        "ROI": r.roi,
-        "Evaluación": r.evaluacion,
-        "Recomendación": r.recomendacion,
-        "Repetir": r.repetir,
-        "Fecha": r.fecha
-    }));
+    let data = resultados.map(r => {
+
+        let e = ensayos.find(x => x.id == r.ensayo_id) || {};
+
+        return {
+
+            // ===== ENSAYO =====
+            "ID Ensayo": e.id || "",
+            "Cultivo": e.cultivo || "",
+            "Variedad": e.variedad_tratada || "",
+            "Productor": e.productor || "",
+
+            // ===== RESULTADOS TÉCNICOS =====
+            "Rendimiento Control": r.rend_control || "",
+            "Rendimiento Tratado": r.rend_tratado || "",
+            "Diferencia": r.diferencia || "",
+            "% Mejora": r.porcentaje || "",
+
+            // ===== COSTOS =====
+            "Semillas": r.semillas || "",
+            "Insumos": r.insumos || "",
+            "Material": r.material || "",
+            "Horas Técnico": r.horas || "",
+            "Costo por Hora": r.costoHora || "",
+            "Costo Total Horas": r.costoHoras || "",
+            "Traslados": r.traslados || "",
+            "Otros": r.otros || "",
+            "Costo Total": r.costoTotal || "",
+
+            // ===== MERCADO =====
+            "Precio Venta": r.precio || "",
+            "Costo Producción": r.costoProduccion || "",
+
+            // ===== RESULTADOS FINANCIEROS =====
+            "Margen": r.margen || "",
+            "ROI": r.roi || "",
+
+            // ===== DECISIÓN =====
+            "Evaluación": r.evaluacion || "",
+            "Recomendación": r.recomendacion || "",
+            "Repetir Ensayo": r.repetir || "",
+
+            // ===== CONTROL =====
+            "Fecha Registro": r.fecha || ""
+        };
+    });
 
     let ws = XLSX.utils.json_to_sheet(data);
     let wb = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(wb, ws, "Resultados");
 
-    XLSX.writeFile(wb, "Resultados.xlsx");
+    XLSX.writeFile(wb, "Resultados_Ensayos_COMPLETO.xlsx");
 }
 
 // INIT
