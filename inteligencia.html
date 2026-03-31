@@ -196,12 +196,69 @@ function renderRanking(){
 // ===== RICE =====
 function renderRICE(){
 
-  let html = "";
+  let variedades = {};
 
   ensayos.forEach(e=>{
-    let score = (Math.random()*100).toFixed(2);
 
-    html += `<div>🌱 ${e.cultivo} → Score: ${score}</div>`;
+    let r = resultados.find(x=>x.ensayo_id==e.id);
+    let ops = oportunidades.filter(x=>x.ensayo==e.id);
+
+    let leads = ops.reduce((a,b)=>a+(b.leads||0),0);
+    let ventas = ops.reduce((a,b)=>a+(b.ventaCerrada||0),0);
+
+    let roi = r ? r.roi : 0;
+    let costo = r ? r.costo : 1; // evitar división entre 0
+
+    if(!variedades[e.cultivo]){
+      variedades[e.cultivo] = {
+        reach:0,
+        impact:0,
+        confidence:0,
+        effort:0,
+        ensayos:0
+      };
+    }
+
+    variedades[e.cultivo].reach += leads;
+    variedades[e.cultivo].impact += ventas;
+    variedades[e.cultivo].confidence += roi;
+    variedades[e.cultivo].effort += costo;
+    variedades[e.cultivo].ensayos++;
+
+  });
+
+  let html = "";
+
+  Object.entries(variedades).forEach(([v,data])=>{
+
+    let reach = data.reach || 1;
+    let impact = data.impact || 1;
+
+    // confianza = ROI promedio ajustado por # ensayos
+    let confidence = (data.confidence / data.ensayos) * Math.log(data.ensayos + 1);
+
+    let effort = data.effort || 1;
+
+    let score = (reach * impact * confidence) / effort;
+
+    let decision = "";
+    let color = "";
+
+    if(score > 70){
+      decision = "🚀 ESCALAR";
+      color = "green";
+    } else if(score > 30){
+      decision = "⚙️ OPTIMIZAR";
+      color = "yellow";
+    } else {
+      decision = "⛔ REVISAR";
+      color = "red";
+    }
+
+    html += `
+    <div style="margin-bottom:10px; color:${color}">
+      🌱 <b>${v}</b> → Score: ${score.toFixed(2)} | ${decision}
+    </div>`;
   });
 
   document.getElementById("rice").innerHTML = html;
