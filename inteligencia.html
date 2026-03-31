@@ -17,7 +17,7 @@ h1 {color:#38bdf8;}
 .red {color:#ef4444;}
 #map {height:400px; border-radius:10px;}
 table {width:100%; margin-top:10px; border-collapse:collapse;}
-td,th {padding:10px; border-bottom:1px solid #334155; text-align:left;}
+td,th {padding:10px; border-bottom:1px solid #334155;}
 th {background:#020617;}
 </style>
 </head>
@@ -25,7 +25,7 @@ th {background:#020617;}
 <body>
 
 <!-- HEADER -->
-<div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+<div style="display:flex; gap:10px; margin-bottom:20px;">
   <a href="index.html"><button>📋 Ensayos</button></a>
   <a href="bitacora.html"><button>📸 Bitácora</button></a>
   <a href="resultados.html"><button>📊 Resultados</button></a>
@@ -48,26 +48,10 @@ th {background:#020617;}
 <table id="ranking"></table>
 </div>
 
-<!-- TABLA REGION -->
+<!-- TABLA DINÁMICA -->
 <div class="card">
 <h2>🌍 Mapa de Ensayos por Región</h2>
-
-<table>
-<tr>
-<th>Región</th>
-<th>Estado</th>
-<th>Variedad</th>
-<th>ROI</th>
-<th>Status</th>
-</tr>
-
-<tr><td>Noroeste</td><td>Sinaloa</td><td>Dumas</td><td>2.8</td><td>Activo</td></tr>
-<tr><td>Bajío</td><td>Guanajuato</td><td>Ibérico</td><td>3.5</td><td>Terminado</td></tr>
-<tr><td>Occidente</td><td>Jalisco</td><td>E20.318</td><td>1.4</td><td>Activo</td></tr>
-<tr><td>Norte</td><td>Chihuahua</td><td>Dumas</td><td>0.9</td><td>Experimental</td></tr>
-<tr><td>Sureste</td><td>Yucatán</td><td>Ibérico</td><td>2.1</td><td>Activo</td></tr>
-
-</table>
+<table id="tablaRegion"></table>
 </div>
 
 <!-- RICE -->
@@ -84,12 +68,12 @@ let resultados = JSON.parse(localStorage.getItem("resultados")) || [];
 let oportunidades = JSON.parse(localStorage.getItem("oportunidades")) || [];
 let bitacora = JSON.parse(localStorage.getItem("bitacora")) || [];
 
+
 // ===== MAPA =====
 let map = L.map('map').setView([23.6,-102.5],5);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-// colocar puntos
 bitacora.forEach(b=>{
   if(b.lat){
     let e = ensayos.find(x=>x.id==b.ensayo_id) || {};
@@ -100,14 +84,49 @@ bitacora.forEach(b=>{
 
     L.marker([b.lat,b.lng]).addTo(map)
     .bindPopup(`
-      <b>${e.variedad_tratada || "N/A"}</b><br>
-      Cultivo: ${e.cultivo || ""}<br>
+      <b>${e.cultivo || ""}</b><br>
+      Región: ${e.region || ""}<br>
       Estado: ${e.estado || ""}<br>
       ROI: ${(r.roi*100||0).toFixed(2)}%<br>
       Leads: ${leads}
     `);
   }
 });
+
+
+// ===== TABLA REGION DINÁMICA =====
+function renderTablaRegion(){
+
+  let html = `
+  <tr>
+  <th>Región</th>
+  <th>Estado</th>
+  <th>Variedad</th>
+  <th>ROI</th>
+  <th>Status</th>
+  </tr>
+  `;
+
+  ensayos.forEach(e=>{
+
+    let r = resultados.find(x=>x.ensayo_id==e.id);
+
+    let roi = r ? (r.roi * 100).toFixed(2) + "%" : "0%";
+
+    html += `
+    <tr>
+      <td>${e.region || ""}</td>
+      <td>${e.region || ""}</td>
+      <td>${e.cultivo || ""}</td>
+      <td>${roi}</td>
+      <td>${e.estado || ""}</td>
+    </tr>
+    `;
+  });
+
+  document.getElementById("tablaRegion").innerHTML = html;
+}
+
 
 // ===== RANKING =====
 let variedades = {};
@@ -119,17 +138,13 @@ resultados.forEach(r=>{
   let o = oportunidades.filter(x=>x.ensayo==r.ensayo_id);
   let ventas = o.reduce((a,b)=>a+b.ventaCerrada,0);
 
-  if(!variedades[e.variedad_tratada]){
-    variedades[e.variedad_tratada] = {
-      ensayos:0,
-      roi:0,
-      ventas:0
-    };
+  if(!variedades[e.cultivo]){
+    variedades[e.cultivo] = {ensayos:0, roi:0, ventas:0};
   }
 
-  variedades[e.variedad_tratada].ensayos++;
-  variedades[e.variedad_tratada].roi += r.roi;
-  variedades[e.variedad_tratada].ventas += ventas;
+  variedades[e.cultivo].ensayos++;
+  variedades[e.cultivo].roi += r.roi;
+  variedades[e.cultivo].ventas += ventas;
 });
 
 let rankingHTML = `
@@ -174,11 +189,15 @@ ensayos.forEach(e=>{
 
   riceHTML += `
   <div class="kpi">
-  🌱 ${e.variedad_tratada || "Sin variedad"} → Score: ${score.toFixed(2)}
+  🌱 ${e.cultivo || ""} → Score: ${score.toFixed(2)}
   </div>`;
 });
 
 document.getElementById("rice").innerHTML = riceHTML;
+
+
+// INIT
+renderTablaRegion();
 
 </script>
 
