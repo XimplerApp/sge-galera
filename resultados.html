@@ -1,57 +1,272 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Resultados</title>
+<title>Resultados de Ensayos</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
 body {font-family: Arial; background:#0f172a; color:white; padding:20px;}
+h1 {color:#38bdf8;}
 .card {background:#1e293b; padding:20px; border-radius:10px; margin-bottom:20px;}
-input {width:100%; padding:8px; margin:5px 0;}
-button {padding:10px; margin-top:10px;}
+
+input, select {
+    width:100%;
+    padding:10px;
+    margin:6px 0;
+    border-radius:6px;
+    border:none;
+}
+
+button {
+    padding:10px;
+    margin-top:10px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.save {background:#22c55e;}
+.delete {background:#ef4444;}
+.export {background:#22c55e;}
+
+.kpi {font-size:18px; margin:5px 0;}
+.green {color:#22c55e;}
+.red {color:#ef4444;}
+.yellow {color:#facc15;}
 </style>
 </head>
 
 <body>
 
-<h1>📊 Resultados</h1>
+<div style="display:flex; gap:10px; margin-bottom:20px;">
+  <a href="index.html"><button>📋 Ensayos</button></a>
+  <a href="bitacora.html"><button>📸 Bitácora</button></a>
+  <a href="resultados.html"><button>📊 Resultados</button></a>
+</div>
+
+<h1>📊 Resultados de Ensayos</h1>
 
 <div class="card">
 
+<h2>Nuevo Resultado</h2>
+
 <select id="ensayoSelect"></select>
 
-<input id="rendControl" placeholder="Control">
-<input id="rendTratado" placeholder="Tratado">
+<h3>Resultados Técnicos</h3>
+<input id="rendControl" placeholder="Rendimiento Control">
+<input id="rendTratado" placeholder="Rendimiento Tratado">
 
-<input id="precio" placeholder="Precio">
-<input id="costoProduccion" placeholder="Costo producción">
+<h3>Costos</h3>
+<input id="semillas" placeholder="Semillas $">
+<input id="insumos" placeholder="Insumos $">
+<input id="material" placeholder="Material $">
+<input id="horas" placeholder="Horas técnico">
+<input id="costoHora" placeholder="Costo por hora">
+<input id="traslados" placeholder="Traslados $">
+<input id="otros" placeholder="Otros $">
 
-<input id="semillas" placeholder="Semillas">
-<input id="insumos" placeholder="Insumos">
-<input id="material" placeholder="Material">
+<h3>Mercado</h3>
+<input id="precio" placeholder="Precio por kg">
+<input id="costoProduccion" placeholder="Costo producción por kg">
 
-<input id="horas" placeholder="Horas">
-<input id="costoHora" placeholder="Costo hora">
-
-<input id="traslados" placeholder="Traslados">
-<input id="otros" placeholder="Otros">
-
-<button onclick="calcular()">Calcular</button>
+<button onclick="calcular()">Calcular + Evaluar</button>
 
 <div id="kpis"></div>
 
-<button onclick="guardar()">Guardar</button>
+<button class="save" onclick="guardar()">Guardar</button>
 
 </div>
 
+<div class="card">
+<button class="export" onclick="exportarExcel()">📊 Exportar</button>
+</div>
+
+<div class="card">
+<h2>Resultados</h2>
 <div id="lista"></div>
+</div>
 
 <script>
 
-// TEST SIMPLE
-console.log("SCRIPT CARGADO OK");
+let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
+let resultados = JSON.parse(localStorage.getItem("resultados")) || [];
+
+// ===== CARGAR ENSAYOS =====
+function cargarEnsayos(){
+    ensayoSelect.innerHTML="";
+    ensayos.forEach(e=>{
+        ensayoSelect.innerHTML += `
+        <option value="${e.id}">
+        ${e.id} | ${e.cultivo} | ${e.variedad_tratada}
+        </option>`;
+    });
+}
+
+// ===== MOTOR DE DECISIÓN =====
+function evaluar(roi, diferencia){
+
+    let evaluacion = "";
+    let recomendacion = "";
+    let repetir = "";
+
+    if(diferencia < 0){
+        evaluacion = "No exitoso";
+        recomendacion = "Detener inmediatamente";
+        repetir = "No";
+    }
+    else if(roi < 0){
+        evaluacion = "No exitoso";
+        recomendacion = "No escalar, revisar causa";
+        repetir = "No";
+    }
+    else if(roi < 0.3){
+        evaluacion = "Parcial";
+        recomendacion = "Ajustar variables y validar nuevamente";
+        repetir = "Sí";
+    }
+    else{
+        evaluacion = "Exitoso";
+        recomendacion = "Escalar comercialmente";
+        repetir = "Sí";
+    }
+
+    return {evaluacion, recomendacion, repetir};
+}
+
+// ===== CALCULAR =====
+function calcular(){
+
+    let rc = parseFloat(rendControl.value) || 0;
+    let rt = parseFloat(rendTratado.value) || 0;
+
+    let precioVal = parseFloat(precio.value) || 0;
+    let costoProd = parseFloat(costoProduccion.value) || 0;
+
+    let semillasVal = parseFloat(semillas.value) || 0;
+    let ins = parseFloat(insumos.value) || 0;
+    let mat = parseFloat(material.value) || 0;
+
+    let hrs = parseFloat(horas.value) || 0;
+    let costoHr = parseFloat(costoHora.value) || 0;
+    let costoHoras = hrs * costoHr;
+
+    let tras = parseFloat(traslados.value) || 0;
+    let otr = parseFloat(otros.value) || 0;
+
+    let diferencia = rt - rc;
+    let porcentaje = rc ? (diferencia/rc)*100 : 0;
+
+    let margenUnitario = precioVal - costoProd;
+    let margen = diferencia * margenUnitario;
+
+    let costoTotal = semillasVal + ins + mat + costoHoras + tras + otr;
+
+    let roi = costoTotal ? (margen - costoTotal) / costoTotal : 0;
+
+    let decision = evaluar(roi, diferencia);
+
+    kpis.innerHTML = `
+        <div class="kpi">📈 Diferencia: ${diferencia.toFixed(2)}</div>
+        <div class="kpi">📊 Mejora: ${porcentaje.toFixed(2)}%</div>
+        <div class="kpi">💰 Margen: $${margen.toFixed(2)}</div>
+        <div class="kpi">💸 Costo: $${costoTotal.toFixed(2)}</div>
+        <div class="kpi ${roi>=0.3?'green':roi>=0?'yellow':'red'}">
+            ROI: ${(roi*100).toFixed(2)}%
+        </div>
+
+        <hr>
+
+        <div class="kpi">📊 Evaluación: <b>${decision.evaluacion}</b></div>
+        <div class="kpi">🧠 Recomendación: ${decision.recomendacion}</div>
+        <div class="kpi">🔁 Repetir ensayo: ${decision.repetir}</div>
+    `;
+
+    window.tmp = {
+        diferencia, porcentaje,
+        margen, costoTotal, roi,
+        costoHoras,
+        ...decision
+    };
+}
+
+// ===== GUARDAR =====
+function guardar(){
+
+    if(!window.tmp){
+        alert("Primero calcula");
+        return;
+    }
+
+    let data = {
+        id: Date.now(),
+        ensayo_id: ensayoSelect.value,
+        ...window.tmp,
+        fecha: new Date().toLocaleString()
+    };
+
+    resultados.push(data);
+    localStorage.setItem("resultados", JSON.stringify(resultados));
+
+    render();
+}
+
+// ===== RENDER =====
+function render(){
+
+    lista.innerHTML="";
+
+    resultados.slice().reverse().forEach(r=>{
+
+        let e = ensayos.find(x=>x.id==r.ensayo_id);
+
+        lista.innerHTML += `
+        <div class="card">
+
+        <h3>${e?.id} | ${e?.cultivo}</h3>
+
+        <p>ROI: ${(r.roi*100).toFixed(2)}%</p>
+        <p>${r.evaluacion}</p>
+        <p>${r.recomendacion}</p>
+        <p>Repetir: ${r.repetir}</p>
+
+        <button class="delete" onclick="eliminar(${r.id})">🗑</button>
+
+        </div>
+        `;
+    });
+}
+
+// ===== ELIMINAR =====
+function eliminar(id){
+    resultados = resultados.filter(r=>r.id!=id);
+    localStorage.setItem("resultados", JSON.stringify(resultados));
+    render();
+}
+
+// ===== EXPORT =====
+function exportarExcel(){
+
+    let data = resultados.map(r => ({
+        "ROI": r.roi,
+        "Evaluación": r.evaluacion,
+        "Recomendación": r.recomendacion,
+        "Repetir": r.repetir,
+        "Fecha": r.fecha
+    }));
+
+    let ws = XLSX.utils.json_to_sheet(data);
+    let wb = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(wb, ws, "Resultados");
+
+    XLSX.writeFile(wb, "Resultados.xlsx");
+}
+
+// INIT
+cargarEnsayos();
+render();
 
 </script>
 
