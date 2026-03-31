@@ -11,14 +11,21 @@
 body {font-family: Arial; background:#0f172a; color:white; padding:20px;}
 h1 {color:#38bdf8;}
 .card {background:#1e293b; padding:20px; border-radius:10px; margin-bottom:20px;}
-.kpi {margin:5px 0;}
-.green {color:#22c55e;}
-.yellow {color:#facc15;}
-.red {color:#ef4444;}
 #map {height:400px; border-radius:10px;}
-table {width:100%; margin-top:10px; border-collapse:collapse;}
-td,th {padding:10px; border-bottom:1px solid #334155;}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  text-align:center;
+}
+
+td,th {
+  padding:10px;
+  border-bottom:1px solid #334155;
+}
+
 th {background:#020617;}
+
 </style>
 </head>
 
@@ -48,7 +55,7 @@ th {background:#020617;}
 <table id="ranking"></table>
 </div>
 
-<!-- TABLA DINÁMICA -->
+<!-- TABLA REGION -->
 <div class="card">
 <h2>🌍 Mapa de Ensayos por Región</h2>
 <table id="tablaRegion"></table>
@@ -87,18 +94,19 @@ bitacora.forEach(b=>{
       <b>${e.cultivo || ""}</b><br>
       Región: ${e.region || ""}<br>
       Estado: ${e.estado || ""}<br>
-      ROI: ${(r.roi*100||0).toFixed(2)}%<br>
+      ROI: ${(r?.roi*100||0).toFixed(2)}%<br>
       Leads: ${leads}
     `);
   }
 });
 
 
-// ===== TABLA REGION DINÁMICA =====
+// ===== TABLA REGION =====
 function renderTablaRegion(){
 
   let html = `
   <tr>
+  <th>ID</th>
   <th>Región</th>
   <th>Estado</th>
   <th>Variedad</th>
@@ -110,16 +118,16 @@ function renderTablaRegion(){
   ensayos.forEach(e=>{
 
     let r = resultados.find(x=>x.ensayo_id==e.id);
-
-    let roi = r ? (r.roi * 100).toFixed(2) + "%" : "0%";
+    let roi = r ? (r.roi*100).toFixed(2)+"%" : "0%";
 
     html += `
     <tr>
-      <td>${e.region || ""}</td>
-      <td>${e.region || ""}</td>
-      <td>${e.cultivo || ""}</td>
+      <td>${e.id}</td>
+      <td>${e.region}</td>
+      <td>${e.region}</td>
+      <td>${e.cultivo}</td>
       <td>${roi}</td>
-      <td>${e.estado || ""}</td>
+      <td>${e.estado}</td>
     </tr>
     `;
   });
@@ -128,76 +136,82 @@ function renderTablaRegion(){
 }
 
 
-// ===== RANKING =====
-let variedades = {};
+// ===== RANKING CORREGIDO =====
+function renderRanking(){
 
-resultados.forEach(r=>{
-  let e = ensayos.find(x=>x.id==r.ensayo_id);
-  if(!e) return;
+  let variedades = {};
 
-  let o = oportunidades.filter(x=>x.ensayo==r.ensayo_id);
-  let ventas = o.reduce((a,b)=>a+b.ventaCerrada,0);
+  ensayos.forEach(e=>{
 
-  if(!variedades[e.cultivo]){
-    variedades[e.cultivo] = {ensayos:0, roi:0, ventas:0};
-  }
+    let r = resultados.find(x=>x.ensayo_id==e.id);
+    let o = oportunidades.filter(x=>x.ensayo==e.id);
 
-  variedades[e.cultivo].ensayos++;
-  variedades[e.cultivo].roi += r.roi;
-  variedades[e.cultivo].ventas += ventas;
-});
+    let roi = r ? r.roi : 0;
+    let ventas = o.reduce((a,b)=>a+b.ventaCerrada,0);
 
-let rankingHTML = `
-<tr>
-<th>Variedad</th>
-<th>Ensayos</th>
-<th>ROI Promedio</th>
-<th>Ventas</th>
-<th>Adopción</th>
-</tr>
-`;
+    if(!variedades[e.cultivo]){
+      variedades[e.cultivo] = {
+        ensayos:0,
+        roi:0,
+        ventas:0
+      };
+    }
 
-Object.entries(variedades).forEach(([v,data])=>{
-  let roiProm = data.roi / data.ensayos;
+    variedades[e.cultivo].ensayos++;
+    variedades[e.cultivo].roi += roi;
+    variedades[e.cultivo].ventas += ventas;
+  });
 
-  let adopcion = data.ventas > 100000 ? "Alta" :
-                 data.ventas > 30000 ? "Media" : "Baja";
-
-  rankingHTML += `
+  let html = `
   <tr>
-    <td>${v}</td>
-    <td>${data.ensayos}</td>
-    <td>${(roiProm*100).toFixed(2)}%</td>
-    <td>$${data.ventas.toFixed(2)}</td>
-    <td>${adopcion}</td>
-  </tr>`;
-});
+  <th>Variedad</th>
+  <th>Ensayos</th>
+  <th>ROI Promedio</th>
+  <th>Ventas</th>
+  <th>Adopción</th>
+  </tr>
+  `;
 
-document.getElementById("ranking").innerHTML = rankingHTML;
+  Object.entries(variedades).forEach(([v,data])=>{
+
+    let roiProm = data.roi / data.ensayos;
+
+    let adopcion = data.ventas > 100000 ? "Alta" :
+                   data.ventas > 30000 ? "Media" : "Baja";
+
+    html += `
+    <tr>
+      <td>${v}</td>
+      <td>${data.ensayos}</td>
+      <td>${(roiProm*100).toFixed(2)}%</td>
+      <td>$${data.ventas.toFixed(2)}</td>
+      <td>${adopcion}</td>
+    </tr>`;
+  });
+
+  document.getElementById("ranking").innerHTML = html;
+}
 
 
 // ===== RICE =====
-let riceHTML = "";
+function renderRICE(){
 
-ensayos.forEach(e=>{
-  let reach = Math.random()*100;
-  let impact = Math.random()*10;
-  let confidence = Math.random();
-  let effort = Math.random()*10;
+  let html = "";
 
-  let score = (reach * impact * confidence) / (effort || 1);
+  ensayos.forEach(e=>{
+    let score = (Math.random()*100).toFixed(2);
 
-  riceHTML += `
-  <div class="kpi">
-  🌱 ${e.cultivo || ""} → Score: ${score.toFixed(2)}
-  </div>`;
-});
+    html += `<div>🌱 ${e.cultivo} → Score: ${score}</div>`;
+  });
 
-document.getElementById("rice").innerHTML = riceHTML;
+  document.getElementById("rice").innerHTML = html;
+}
 
 
 // INIT
 renderTablaRegion();
+renderRanking();
+renderRICE();
 
 </script>
 
