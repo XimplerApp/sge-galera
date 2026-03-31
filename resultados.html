@@ -1,272 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Resultados</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+body {font-family: Arial; background:#0f172a; color:white; padding:20px;}
+.card {background:#1e293b; padding:20px; border-radius:10px; margin-bottom:20px;}
+input {width:100%; padding:8px; margin:5px 0;}
+button {padding:10px; margin-top:10px;}
+</style>
+</head>
+
+<body>
+
+<h1>📊 Resultados</h1>
+
+<div class="card">
+
+<select id="ensayoSelect"></select>
+
+<input id="rendControl" placeholder="Control">
+<input id="rendTratado" placeholder="Tratado">
+
+<input id="precio" placeholder="Precio">
+<input id="costoProduccion" placeholder="Costo producción">
+
+<input id="semillas" placeholder="Semillas">
+<input id="insumos" placeholder="Insumos">
+<input id="material" placeholder="Material">
+
+<input id="horas" placeholder="Horas">
+<input id="costoHora" placeholder="Costo hora">
+
+<input id="traslados" placeholder="Traslados">
+<input id="otros" placeholder="Otros">
+
+<button onclick="calcular()">Calcular</button>
+
+<div id="kpis"></div>
+
+<button onclick="guardar()">Guardar</button>
+
+</div>
+
+<div id="lista"></div>
+
 <script>
 
-let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
-let resultados = JSON.parse(localStorage.getItem("resultados")) || [];
-
-// ===== HELPERS =====
-const get = id => document.getElementById(id);
-
-// ===== CARGAR ENSAYOS =====
-function cargarEnsayos(){
-    let select = get("ensayoSelect");
-    if(!select) return;
-
-    select.innerHTML="";
-
-    ensayos.forEach(e=>{
-        select.innerHTML += `
-        <option value="${e.id}">
-        ${e.id} | ${e.cultivo} | ${e.variedad_tratada}
-        </option>`;
-    });
-}
-
-// ===== MOTOR DE DECISIÓN =====
-function evaluar(roi, diferencia){
-
-    if(diferencia < 0){
-        return {
-            evaluacion: "No exitoso",
-            recomendacion: "Detener inmediatamente",
-            repetir: "No"
-        };
-    }
-
-    if(roi < 0){
-        return {
-            evaluacion: "No exitoso",
-            recomendacion: "No escalar, revisar causa",
-            repetir: "No"
-        };
-    }
-
-    if(roi < 0.3){
-        return {
-            evaluacion: "Parcial",
-            recomendacion: "Ajustar variables y validar nuevamente",
-            repetir: "Sí"
-        };
-    }
-
-    return {
-        evaluacion: "Exitoso",
-        recomendacion: "Escalar comercialmente",
-        repetir: "Sí"
-    };
-}
-
-// ===== CALCULAR =====
-function calcular(){
-
-    let rc = parseFloat(get("rendControl")?.value) || 0;
-    let rt = parseFloat(get("rendTratado")?.value) || 0;
-
-    let precioVal = parseFloat(get("precio")?.value) || 0;
-    let costoProd = parseFloat(get("costoProduccion")?.value) || 0;
-
-    let semillasVal = parseFloat(get("semillas")?.value) || 0;
-    let ins = parseFloat(get("insumos")?.value) || 0;
-    let mat = parseFloat(get("material")?.value) || 0;
-
-    let hrs = parseFloat(get("horas")?.value) || 0;
-    let costoHr = parseFloat(get("costoHora")?.value) || 0;
-    let costoHoras = hrs * costoHr;
-
-    let tras = parseFloat(get("traslados")?.value) || 0;
-    let otr = parseFloat(get("otros")?.value) || 0;
-
-    let diferencia = rt - rc;
-    let porcentaje = rc ? (diferencia/rc)*100 : 0;
-
-    let margenUnitario = precioVal - costoProd;
-    let margen = diferencia * margenUnitario;
-
-    let costoTotal = semillasVal + ins + mat + costoHoras + tras + otr;
-
-    let roi = costoTotal ? (margen - costoTotal) / costoTotal : 0;
-
-    let decision = evaluar(roi, diferencia);
-
-    let kpisDiv = get("kpis");
-
-    if(kpisDiv){
-        kpisDiv.innerHTML = `
-            <div class="kpi">📈 Diferencia: ${diferencia.toFixed(2)}</div>
-            <div class="kpi">📊 Mejora: ${porcentaje.toFixed(2)}%</div>
-            <div class="kpi">💰 Margen: $${margen.toFixed(2)}</div>
-            <div class="kpi">💸 Costo: $${costoTotal.toFixed(2)}</div>
-            <div class="kpi ${roi>=0.3?'green':roi>=0?'yellow':'red'}">
-                ROI: ${(roi*100).toFixed(2)}%
-            </div>
-
-            <hr>
-
-            <div class="kpi">📊 Evaluación: <b>${decision.evaluacion}</b></div>
-            <div class="kpi">🧠 Recomendación: ${decision.recomendacion}</div>
-            <div class="kpi">🔁 Repetir ensayo: ${decision.repetir}</div>
-        `;
-    }
-
-    window.tmp = {
-        diferencia,
-        porcentaje,
-        margen,
-        costoTotal,
-        roi,
-        costoHoras,
-        evaluacion: decision.evaluacion,
-        recomendacion: decision.recomendacion,
-        repetir: decision.repetir
-    };
-}
-
-// ===== GUARDAR =====
-function guardar(){
-
-    if(!window.tmp){
-        alert("Primero calcula el ROI");
-        return;
-    }
-
-    let data = {
-        id: Date.now(),
-        ensayo_id: get("ensayoSelect")?.value,
-
-        diferencia: window.tmp.diferencia,
-        porcentaje: window.tmp.porcentaje,
-        margen: window.tmp.margen,
-        costoTotal: window.tmp.costoTotal,
-        roi: window.tmp.roi,
-
-        semillas: get("semillas")?.value,
-        insumos: get("insumos")?.value,
-        material: get("material")?.value,
-        horas: get("horas")?.value,
-        costoHora: get("costoHora")?.value,
-        costoHoras: window.tmp.costoHoras,
-        traslados: get("traslados")?.value,
-        otros: get("otros")?.value,
-
-        precio: get("precio")?.value,
-        costoProduccion: get("costoProduccion")?.value,
-
-        evaluacion: window.tmp.evaluacion,
-        recomendacion: window.tmp.recomendacion,
-        repetir: window.tmp.repetir,
-
-        fecha: new Date().toLocaleString()
-    };
-
-    resultados.push(data);
-    localStorage.setItem("resultados", JSON.stringify(resultados));
-
-    limpiar();
-    render();
-}
-
-// ===== RENDER =====
-function render(){
-
-    let lista = get("lista");
-    if(!lista) return;
-
-    lista.innerHTML="";
-
-    resultados.slice().reverse().forEach(r=>{
-
-        let e = ensayos.find(x=>x.id==r.ensayo_id) || {};
-        let color = r.roi >= 0.3 ? "green" : r.roi >= 0 ? "yellow" : "red";
-
-        lista.innerHTML += `
-        <div class="card">
-
-        <h3>${e.id || ""} | ${e.cultivo || ""} | ${e.variedad_tratada || ""}</h3>
-
-        <p>📈 Diferencia: ${Number(r.diferencia).toFixed(2)}</p>
-        <p>📊 Mejora: ${Number(r.porcentaje).toFixed(2)}%</p>
-
-        <p>💰 Margen: $${Number(r.margen).toFixed(2)}</p>
-        <p>💸 Costo: $${Number(r.costoTotal).toFixed(2)}</p>
-
-        <p class="${color}"><b>ROI: ${(Number(r.roi)*100).toFixed(2)}%</b></p>
-
-        <hr>
-
-        <p>📊 Evaluación: <b>${r.evaluacion}</b></p>
-        <p>🧠 Recomendación: ${r.recomendacion}</p>
-        <p>🔁 Repetir ensayo: ${r.repetir}</p>
-
-        <p style="font-size:12px;">${r.fecha}</p>
-
-        <button class="delete" onclick="eliminar(${r.id})">🗑</button>
-
-        </div>
-        `;
-    });
-}
-
-// ===== ELIMINAR =====
-function eliminar(id){
-    if(confirm("Eliminar resultado?")){
-        resultados = resultados.filter(r=>r.id!=id);
-        localStorage.setItem("resultados", JSON.stringify(resultados));
-        render();
-    }
-}
-
-// ===== EXPORT =====
-function exportarExcel(){
-
-    let data = resultados.map(r => {
-        let e = ensayos.find(x => x.id == r.ensayo_id) || {};
-
-        return {
-            "ID Ensayo": e.id || "",
-            "Cultivo": e.cultivo || "",
-            "Variedad": e.variedad_tratada || "",
-
-            "Diferencia": r.diferencia,
-            "% Mejora": r.porcentaje,
-            "Margen": r.margen,
-            "Costo Total": r.costoTotal,
-            "ROI": r.roi,
-
-            "Semillas": r.semillas,
-            "Insumos": r.insumos,
-            "Material": r.material,
-            "Horas Técnico": r.horas,
-            "Costo por Hora": r.costoHora,
-            "Costo Total Horas": r.costoHoras,
-            "Traslados": r.traslados,
-            "Otros": r.otros,
-
-            "Precio": r.precio,
-            "Costo Producción": r.costoProduccion,
-
-            "Evaluación": r.evaluacion,
-            "Recomendación": r.recomendacion,
-            "Repetir Ensayo": r.repetir,
-
-            "Fecha": r.fecha
-        };
-    });
-
-    let ws = XLSX.utils.json_to_sheet(data);
-    let wb = XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(wb, ws, "Resultados");
-    XLSX.writeFile(wb, "Resultados_Ensayos.xlsx");
-}
-
-// ===== LIMPIAR =====
-function limpiar(){
-    document.querySelectorAll("input").forEach(i=>i.value="");
-    let kpis = get("kpis");
-    if(kpis) kpis.innerHTML="";
-}
-
-// INIT
-cargarEnsayos();
-render();
+// TEST SIMPLE
+console.log("SCRIPT CARGADO OK");
 
 </script>
+
+</body>
+</html>
