@@ -224,12 +224,23 @@ function render(){
         lista.innerHTML += `
         <div class="card">
 
-        <h3>${e?.id} | ${e?.cultivo}</h3>
+        <h3>${e?.id} | ${e?.cultivo} | ${e?.variedad_tratada}</h3>
 
-        <p>ROI: ${(r.roi*100).toFixed(2)}%</p>
-        <p>${r.evaluacion}</p>
-        <p>${r.recomendacion}</p>
-        <p>Repetir: ${r.repetir}</p>
+        <p>📈 Diferencia: ${r.diferencia.toFixed(2)}</p>
+        <p>📊 Mejora: ${r.porcentaje.toFixed(2)}%</p>
+
+        <p>💰 Margen: $${r.margen.toFixed(2)}</p>
+        <p>💸 Costo: $${r.costoTotal.toFixed(2)}</p>
+
+        <p><b>ROI: ${(r.roi*100).toFixed(2)}%</b></p>
+
+        <hr>
+
+        <p>📊 Evaluación: <b>${r.evaluacion}</b></p>
+        <p>🧠 Recomendación: ${r.recomendacion}</p>
+        <p>🔁 Repetir ensayo: ${r.repetir}</p>
+
+        <p style="font-size:12px;">${r.fecha}</p>
 
         <button class="delete" onclick="eliminar(${r.id})">🗑</button>
 
