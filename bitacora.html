@@ -7,8 +7,8 @@
   <!-- Excel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-  <!-- MAPA -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
@@ -21,9 +21,9 @@
     button {
       padding:10px; background:#38bdf8; border:none; border-radius:6px; cursor:pointer;
     }
+    .export {background:#22c55e;}
     #map {height:300px; border-radius:10px; margin-top:10px;}
     img {max-width:100%; border-radius:10px; margin-top:10px;}
-    .export {background:#22c55e;}
   </style>
 </head>
 
@@ -53,11 +53,11 @@
 
 <input id="comentario" placeholder="Observación técnica">
 
+<label>Foto (opcional)</label>
 <input type="file" id="foto">
 
-<h3>Selecciona ubicación</h3>
+<h3>Ubicación (opcional)</h3>
 <div id="map"></div>
-
 <p id="coords"></p>
 
 <button onclick="guardarBitacora()">Guardar</button>
@@ -75,13 +75,14 @@
 
 <script>
 
+// ====== DATA ======
 let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
 let bitacora = JSON.parse(localStorage.getItem("bitacora")) || [];
 
 let lat = null;
 let lng = null;
 
-// cargar ensayos
+// ====== CARGAR ENSAYOS ======
 function cargarEnsayos(){
   let select = document.getElementById("ensayoSelect");
   select.innerHTML = "";
@@ -93,8 +94,8 @@ function cargarEnsayos(){
   });
 }
 
-// MAPA
-let map = L.map('map').setView([25.6866, -100.3161], 5);
+// ====== MAPA ======
+let map = L.map('map').setView([23.6345, -102.5528], 5);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -112,61 +113,64 @@ map.on('click', function(e){
     "Lat: " + lat.toFixed(4) + " | Lng: " + lng.toFixed(4);
 });
 
-// guardar
+// ====== GUARDAR ======
 function guardarBitacora(){
 
-  if(!lat || !lng){
-    alert("Selecciona ubicación en el mapa");
+  if(!responsable.value){
+    alert("Ingresa el responsable");
     return;
   }
 
   let file = document.getElementById("foto").files[0];
 
-  if(!file){
-    alert("Sube una foto");
-    return;
-  }
+  if(file){
+    let reader = new FileReader();
 
-  let reader = new FileReader();
-
-  reader.onload = function(){
-
-    let registro = {
-      id: Date.now(),
-      ensayo_id: ensayoSelect.value,
-      responsable: responsable.value,
-      etapa: etapa.value,
-      comentario: comentario.value,
-      foto: reader.result,
-      lat,
-      lng,
-      fecha: new Date().toLocaleString()
+    reader.onload = function(){
+      guardarRegistro(reader.result);
     };
 
-    bitacora.push(registro);
-    localStorage.setItem("bitacora", JSON.stringify(bitacora));
+    reader.readAsDataURL(file);
 
-    limpiarFormulario();
-    render();
-  };
-
-  reader.readAsDataURL(file);
+  } else {
+    guardarRegistro(null);
+  }
 }
 
-// limpiar campos
+function guardarRegistro(fotoBase64){
+
+  let registro = {
+    id: Date.now(),
+    ensayo_id: ensayoSelect.value,
+    responsable: responsable.value,
+    etapa: etapa.value,
+    comentario: comentario.value,
+    foto: fotoBase64, // opcional
+    lat: lat, // opcional
+    lng: lng, // opcional
+    fecha: new Date().toLocaleString()
+  };
+
+  bitacora.push(registro);
+  localStorage.setItem("bitacora", JSON.stringify(bitacora));
+
+  limpiarFormulario();
+  render();
+}
+
+// ====== LIMPIAR ======
 function limpiarFormulario(){
   comentario.value = "";
   responsable.value = "";
   foto.value = "";
-
   lat = null;
   lng = null;
-  document.getElementById("coords").innerText = "";
+  coords.innerText = "";
 
   if(marker) map.removeLayer(marker);
 }
 
-// render
+// ====== RENDER ======
 function render(){
 
   let div = document.getElementById("timeline");
@@ -182,15 +186,18 @@ function render(){
         <p><b>Responsable:</b> ${b.responsable}</p>
         <p><b>Etapa:</b> ${b.etapa}</p>
         <p>${b.comentario}</p>
-        <p><b>Ubicación:</b> ${b.lat.toFixed(4)}, ${b.lng.toFixed(4)}</p>
+
+        ${b.lat ? `<p><b>Ubicación:</b> ${b.lat.toFixed(4)}, ${b.lng.toFixed(4)}</p>` : ""}
+
         <p><small>${b.fecha}</small></p>
-        <img src="${b.foto}">
+
+        ${b.foto ? `<img src="${b.foto}">` : ""}
       </div>
     `;
   });
 }
 
-// exportar
+// ====== EXPORT ======
 function exportarExcel(){
 
   let data = bitacora.map(b => ({
@@ -198,8 +205,8 @@ function exportarExcel(){
     "Responsable": b.responsable,
     "Etapa": b.etapa,
     "Comentario": b.comentario,
-    "Latitud": b.lat,
-    "Longitud": b.lng,
+    "Latitud": b.lat || "",
+    "Longitud": b.lng || "",
     "Fecha": b.fecha
   }));
 
@@ -210,6 +217,7 @@ function exportarExcel(){
   XLSX.writeFile(wb, "Bitacora_Galera.xlsx");
 }
 
+// ====== INIT ======
 cargarEnsayos();
 render();
 
