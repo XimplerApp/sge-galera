@@ -26,6 +26,9 @@ td,th {
 
 th {background:#020617;}
 
+.green {color:#22c55e;}
+.yellow {color:#facc15;}
+.red {color:#ef4444;}
 </style>
 </head>
 
@@ -91,9 +94,9 @@ bitacora.forEach(b=>{
 
     L.marker([b.lat,b.lng]).addTo(map)
     .bindPopup(`
-      <b>${e.cultivo || ""}</b><br>
-      Región: ${e.region || ""}<br>
-      Estado: ${e.estado || ""}<br>
+      <b>${e.cultivo}</b><br>
+      Región: ${e.region}<br>
+      Estado: ${e.estado}<br>
       ROI: ${(r?.roi*100||0).toFixed(2)}%<br>
       Leads: ${leads}
     `);
@@ -116,7 +119,6 @@ function renderTablaRegion(){
   `;
 
   ensayos.forEach(e=>{
-
     let r = resultados.find(x=>x.ensayo_id==e.id);
     let roi = r ? (r.roi*100).toFixed(2)+"%" : "0%";
 
@@ -136,7 +138,7 @@ function renderTablaRegion(){
 }
 
 
-// ===== RANKING CORREGIDO =====
+// ===== RANKING CON ADOPCIÓN REAL =====
 function renderRanking(){
 
   let variedades = {};
@@ -144,22 +146,24 @@ function renderRanking(){
   ensayos.forEach(e=>{
 
     let r = resultados.find(x=>x.ensayo_id==e.id);
-    let o = oportunidades.filter(x=>x.ensayo==e.id);
+    let ops = oportunidades.filter(x=>x.ensayo==e.id);
 
-    let roi = r ? r.roi : 0;
-    let ventas = o.reduce((a,b)=>a+b.ventaCerrada,0);
+    let ventas = ops.reduce((a,b)=>a+(b.ventaCerrada||0),0);
+    let tieneVenta = ventas > 0 ? 1 : 0;
 
     if(!variedades[e.cultivo]){
       variedades[e.cultivo] = {
         ensayos:0,
         roi:0,
-        ventas:0
+        ventas:0,
+        adopcionCount:0
       };
     }
 
     variedades[e.cultivo].ensayos++;
-    variedades[e.cultivo].roi += roi;
+    variedades[e.cultivo].roi += (r ? r.roi : 0);
     variedades[e.cultivo].ventas += ventas;
+    variedades[e.cultivo].adopcionCount += tieneVenta;
   });
 
   let html = `
@@ -175,9 +179,10 @@ function renderRanking(){
   Object.entries(variedades).forEach(([v,data])=>{
 
     let roiProm = data.roi / data.ensayos;
+    let adopcionReal = data.adopcionCount / data.ensayos;
 
-    let adopcion = data.ventas > 100000 ? "Alta" :
-                   data.ventas > 30000 ? "Media" : "Baja";
+    let nivel = adopcionReal > 0.6 ? "Alta" :
+                adopcionReal > 0.3 ? "Media" : "Baja";
 
     html += `
     <tr>
@@ -185,7 +190,7 @@ function renderRanking(){
       <td>${data.ensayos}</td>
       <td>${(roiProm*100).toFixed(2)}%</td>
       <td>$${data.ventas.toFixed(2)}</td>
-      <td>${adopcion}</td>
+      <td>${nivel} (${(adopcionReal*100).toFixed(0)}%)</td>
     </tr>`;
   });
 
@@ -193,7 +198,7 @@ function renderRanking(){
 }
 
 
-// ===== RICE =====
+// ===== RICE CON INTERPRETACIÓN =====
 function renderRICE(){
 
   let variedades = {};
@@ -207,7 +212,7 @@ function renderRICE(){
     let ventas = ops.reduce((a,b)=>a+(b.ventaCerrada||0),0);
 
     let roi = r ? r.roi : 0;
-    let costo = r ? r.costo : 1; // evitar división entre 0
+    let costo = r ? r.costo : 1;
 
     if(!variedades[e.cultivo]){
       variedades[e.cultivo] = {
@@ -224,7 +229,6 @@ function renderRICE(){
     variedades[e.cultivo].confidence += roi;
     variedades[e.cultivo].effort += costo;
     variedades[e.cultivo].ensayos++;
-
   });
 
   let html = "";
@@ -233,31 +237,34 @@ function renderRICE(){
 
     let reach = data.reach || 1;
     let impact = data.impact || 1;
-
-    // confianza = ROI promedio ajustado por # ensayos
-    let confidence = (data.confidence / data.ensayos) * Math.log(data.ensayos + 1);
-
+    let confidence = (data.confidence / data.ensayos);
     let effort = data.effort || 1;
 
     let score = (reach * impact * confidence) / effort;
 
     let decision = "";
+    let texto = "";
     let color = "";
 
     if(score > 70){
       decision = "🚀 ESCALAR";
+      texto = "Alta oportunidad comercial. Incrementar inversión, ensayos y empuje técnico.";
       color = "green";
     } else if(score > 30){
       decision = "⚙️ OPTIMIZAR";
+      texto = "Buen potencial, pero requiere ajustes en ejecución o conversión.";
       color = "yellow";
     } else {
       decision = "⛔ REVISAR";
+      texto = "Bajo rendimiento actual. Evaluar continuidad o rediseñar estrategia.";
       color = "red";
     }
 
     html += `
-    <div style="margin-bottom:10px; color:${color}">
-      🌱 <b>${v}</b> → Score: ${score.toFixed(2)} | ${decision}
+    <div style="margin-bottom:15px; color:${color}">
+      <b>🌱 ${v}</b><br>
+      Score: ${score.toFixed(2)} | ${decision}<br>
+      <small>${texto}</small>
     </div>`;
   });
 
