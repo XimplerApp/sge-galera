@@ -34,6 +34,7 @@ button {
 .kpi {font-size:18px; margin:5px 0;}
 .green {color:#22c55e;}
 .red {color:#ef4444;}
+.yellow {color:#facc15;}
 </style>
 </head>
 
@@ -47,7 +48,6 @@ button {
 
 <h1>📊 Resultados de Ensayos</h1>
 
-<!-- FORM -->
 <div class="card">
 
 <h2>Nuevo Resultado</h2>
@@ -55,48 +55,36 @@ button {
 <select id="ensayoSelect"></select>
 
 <h3>Resultados Técnicos</h3>
-<input id="rendControl" placeholder="Rendimiento Control (kg/ha)">
-<input id="rendTratado" placeholder="Rendimiento Tratado (kg/ha)">
-<input id="calidad" placeholder="Calidad comercial">
-<input id="plaga" placeholder="% incidencia plaga">
+<input id="rendControl" placeholder="Rendimiento Control">
+<input id="rendTratado" placeholder="Rendimiento Tratado">
 
 <h3>Costos</h3>
 <input id="semillas" placeholder="Semillas $">
 <input id="insumos" placeholder="Insumos $">
 <input id="material" placeholder="Material $">
-
-<input id="horas" placeholder="Horas técnico (hrs)">
-<input id="costoHora" placeholder="Costo por hora $">
-
+<input id="horas" placeholder="Horas técnico">
+<input id="costoHora" placeholder="Costo por hora">
 <input id="traslados" placeholder="Traslados $">
 <input id="otros" placeholder="Otros $">
 
-<h3>Datos de Mercado</h3>
-<input id="precio" placeholder="Precio de venta por kg">
+<h3>Mercado</h3>
+<input id="precio" placeholder="Precio por kg">
 <input id="costoProduccion" placeholder="Costo producción por kg">
 
-<button onclick="calcular()">Calcular ROI</button>
+<button onclick="calcular()">Calcular + Evaluar</button>
 
 <div id="kpis"></div>
 
-<select id="evaluacion">
-<option>Exitoso</option>
-<option>Parcial</option>
-<option>No exitoso</option>
-</select>
-
-<button class="save" onclick="guardar()">Guardar Resultado</button>
+<button class="save" onclick="guardar()">Guardar</button>
 
 </div>
 
-<!-- EXPORT -->
 <div class="card">
-<button class="export" onclick="exportarExcel()">📊 Exportar Resultados</button>
+<button class="export" onclick="exportarExcel()">📊 Exportar</button>
 </div>
 
-<!-- LISTADO -->
 <div class="card">
-<h2>Resultados Guardados</h2>
+<h2>Resultados</h2>
 <div id="lista"></div>
 </div>
 
@@ -111,9 +99,40 @@ function cargarEnsayos(){
     ensayos.forEach(e=>{
         ensayoSelect.innerHTML += `
         <option value="${e.id}">
-        ${e.id} | ${e.cultivo} | ${e.variedad_tratada} | ${e.productor}
+        ${e.id} | ${e.cultivo} | ${e.variedad_tratada}
         </option>`;
     });
+}
+
+// ===== MOTOR DE DECISIÓN =====
+function evaluar(roi, diferencia){
+
+    let evaluacion = "";
+    let recomendacion = "";
+    let repetir = "";
+
+    if(diferencia < 0){
+        evaluacion = "No exitoso";
+        recomendacion = "Detener inmediatamente";
+        repetir = "No";
+    }
+    else if(roi < 0){
+        evaluacion = "No exitoso";
+        recomendacion = "No escalar, revisar causa";
+        repetir = "No";
+    }
+    else if(roi < 0.3){
+        evaluacion = "Parcial";
+        recomendacion = "Ajustar variables y validar nuevamente";
+        repetir = "Sí";
+    }
+    else{
+        evaluacion = "Exitoso";
+        recomendacion = "Escalar comercialmente";
+        repetir = "Sí";
+    }
+
+    return {evaluacion, recomendacion, repetir};
 }
 
 // ===== CALCULAR =====
@@ -131,7 +150,6 @@ function calcular(){
 
     let hrs = parseFloat(horas.value) || 0;
     let costoHr = parseFloat(costoHora.value) || 0;
-
     let costoHoras = hrs * costoHr;
 
     let tras = parseFloat(traslados.value) || 0;
@@ -147,21 +165,29 @@ function calcular(){
 
     let roi = costoTotal ? (margen - costoTotal) / costoTotal : 0;
 
+    let decision = evaluar(roi, diferencia);
+
     kpis.innerHTML = `
         <div class="kpi">📈 Diferencia: ${diferencia.toFixed(2)}</div>
-        <div class="kpi">📊 Mejora %: ${porcentaje.toFixed(2)}%</div>
-        <div class="kpi">💰 Margen adicional: $${margen.toFixed(2)}</div>
-        <div class="kpi">💸 Costo total: $${costoTotal.toFixed(2)}</div>
-        <div class="kpi">⏱ Costo horas: $${costoHoras.toFixed(2)}</div>
-        <div class="kpi ${roi>=0.3?'green':'red'}">
+        <div class="kpi">📊 Mejora: ${porcentaje.toFixed(2)}%</div>
+        <div class="kpi">💰 Margen: $${margen.toFixed(2)}</div>
+        <div class="kpi">💸 Costo: $${costoTotal.toFixed(2)}</div>
+        <div class="kpi ${roi>=0.3?'green':roi>=0?'yellow':'red'}">
             ROI: ${(roi*100).toFixed(2)}%
         </div>
+
+        <hr>
+
+        <div class="kpi">📊 Evaluación: <b>${decision.evaluacion}</b></div>
+        <div class="kpi">🧠 Recomendación: ${decision.recomendacion}</div>
+        <div class="kpi">🔁 Repetir ensayo: ${decision.repetir}</div>
     `;
 
     window.tmp = {
         diferencia, porcentaje,
-        margen, costoTotal,
-        roi, costoHoras
+        margen, costoTotal, roi,
+        costoHoras,
+        ...decision
     };
 }
 
@@ -169,57 +195,21 @@ function calcular(){
 function guardar(){
 
     if(!window.tmp){
-        alert("Primero calcula el ROI");
+        alert("Primero calcula");
         return;
-    }
-
-    // asegurar cálculo correcto
-    if(!window.tmp.costoHoras){
-        calcular();
     }
 
     let data = {
         id: Date.now(),
         ensayo_id: ensayoSelect.value,
-
-        rend_control: rendControl.value,
-        rend_tratado: rendTratado.value,
-        calidad: calidad.value,
-        plaga: plaga.value,
-
-        semillas: semillas.value,
-        insumos: insumos.value,
-        material: material.value,
-        horas: horas.value,
-        costoHora: costoHora.value,
-        costoHoras: window.tmp.costoHoras,
-
-        traslados: traslados.value,
-        otros: otros.value,
-
-        precio: precio.value,
-        costoProduccion: costoProduccion.value,
-
         ...window.tmp,
-
-        evaluacion: evaluacion.value,
         fecha: new Date().toLocaleString()
     };
 
     resultados.push(data);
     localStorage.setItem("resultados", JSON.stringify(resultados));
 
-    limpiar();
     render();
-}
-
-// ===== ELIMINAR =====
-function eliminar(id){
-    if(confirm("Eliminar resultado?")){
-        resultados = resultados.filter(r=>r.id!=id);
-        localStorage.setItem("resultados", JSON.stringify(resultados));
-        render();
-    }
 }
 
 // ===== RENDER =====
@@ -234,14 +224,12 @@ function render(){
         lista.innerHTML += `
         <div class="card">
 
-        <h3>${e?.id} | ${e?.cultivo} | ${e?.variedad_tratada}</h3>
+        <h3>${e?.id} | ${e?.cultivo}</h3>
 
-        <p>📈 ${r.diferencia.toFixed(2)} kg</p>
-        <p>📊 ${r.porcentaje.toFixed(2)}%</p>
-        <p>💰 ROI: ${(r.roi*100).toFixed(2)}%</p>
-
-        <p>Resultado: ${r.evaluacion}</p>
-        <p>${r.fecha}</p>
+        <p>ROI: ${(r.roi*100).toFixed(2)}%</p>
+        <p>${r.evaluacion}</p>
+        <p>${r.recomendacion}</p>
+        <p>Repetir: ${r.repetir}</p>
 
         <button class="delete" onclick="eliminar(${r.id})">🗑</button>
 
@@ -250,56 +238,30 @@ function render(){
     });
 }
 
-// ===== EXPORTAR EXCEL =====
+// ===== ELIMINAR =====
+function eliminar(id){
+    resultados = resultados.filter(r=>r.id!=id);
+    localStorage.setItem("resultados", JSON.stringify(resultados));
+    render();
+}
+
+// ===== EXPORT =====
 function exportarExcel(){
 
-    let data = resultados.map(r => {
-
-        let e = ensayos.find(x => x.id == r.ensayo_id) || {};
-
-        return {
-            "ID Ensayo": e.id || "",
-            "Cultivo": e.cultivo || "",
-            "Variedad": e.variedad_tratada || "",
-            "Productor": e.productor || "",
-
-            "Rendimiento Control": r.rend_control,
-            "Rendimiento Tratado": r.rend_tratado,
-            "Diferencia": r.diferencia,
-            "% Mejora": r.porcentaje,
-
-            "Semillas": r.semillas,
-            "Insumos": r.insumos,
-            "Material": r.material,
-            "Horas Técnico": r.horas,
-            "Costo por Hora": r.costoHora,
-            "Costo Total Horas": r.costoHoras,
-            "Traslados": r.traslados,
-            "Otros": r.otros,
-            "Costo Total": r.costoTotal,
-
-            "Precio Venta": r.precio,
-            "Costo Producción": r.costoProduccion,
-            "Margen": r.margen,
-            "ROI": r.roi,
-
-            "Evaluación": r.evaluacion,
-            "Fecha": r.fecha
-        };
-    });
+    let data = resultados.map(r => ({
+        "ROI": r.roi,
+        "Evaluación": r.evaluacion,
+        "Recomendación": r.recomendacion,
+        "Repetir": r.repetir,
+        "Fecha": r.fecha
+    }));
 
     let ws = XLSX.utils.json_to_sheet(data);
     let wb = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(wb, ws, "Resultados");
 
-    XLSX.writeFile(wb, "Resultados_Ensayos.xlsx");
-}
-
-// ===== LIMPIAR =====
-function limpiar(){
-    document.querySelectorAll("input").forEach(i=>i.value="");
-    kpis.innerHTML="";
+    XLSX.writeFile(wb, "Resultados.xlsx");
 }
 
 // INIT
