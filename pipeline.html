@@ -33,7 +33,6 @@ button {
 .kpi {font-size:18px; margin:5px 0;}
 .green {color:#22c55e;}
 .red {color:#ef4444;}
-.yellow {color:#facc15;}
 
 table {
     width:100%;
@@ -64,7 +63,7 @@ th, td {
 
 <h2>Nuevo Registro</h2>
 
-<input id="idEnsayo" placeholder="ID Ensayo">
+<select id="idEnsayo"></select>
 
 <input id="productores" placeholder="Productores interesados">
 <input id="leads" placeholder="Leads generados">
@@ -92,7 +91,7 @@ th, td {
 
 <h2>📋 Oportunidades Comerciales</h2>
 
-<input id="idEnsayoO" placeholder="ID Ensayo">
+<select id="idEnsayoO"></select>
 
 <select id="interesado">
 <option value="Sí">Productor interesado: Sí</option>
@@ -121,11 +120,27 @@ th, td {
 
 <script>
 
-// ================= DATA =================
+// ===== DATA =====
+let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
 let pipeline = JSON.parse(localStorage.getItem("pipeline")) || [];
 let oportunidades = JSON.parse(localStorage.getItem("oportunidades")) || [];
 
-// ================= GUARDAR PIPELINE =================
+// ===== CARGAR ENSAYOS =====
+function cargarEnsayos(){
+
+    idEnsayo.innerHTML="";
+    idEnsayoO.innerHTML="";
+
+    ensayos.forEach(e => {
+
+        let texto = `${e.id} | ${e.cultivo} | ${e.variedad_tratada} | ${e.productor}`;
+
+        idEnsayo.innerHTML += `<option value="${e.id}">${texto}</option>`;
+        idEnsayoO.innerHTML += `<option value="${e.id}">${texto}</option>`;
+    });
+}
+
+// ===== GUARDAR PIPELINE =====
 function guardarPipeline(){
 
     let data = {
@@ -146,11 +161,10 @@ function guardarPipeline(){
     calcularDashboard();
 }
 
-// ================= DASHBOARD =================
+// ===== DASHBOARD =====
 function calcularDashboard(){
 
     let totalEnsayos = pipeline.length;
-
     let totalEstimado = pipeline.reduce((a,b)=>a+b.ventaEstimada,0);
     let totalVentas = pipeline.reduce((a,b)=>a+b.ventaCerrada,0);
 
@@ -168,9 +182,7 @@ function calcularDashboard(){
     `;
 }
 
-calcularDashboard();
-
-// ================= OPORTUNIDADES =================
+// ===== OPORTUNIDADES =====
 function guardarOportunidad(){
 
     let data = {
@@ -215,6 +227,9 @@ function cargarTabla(){
     });
 }
 
+// ===== INIT =====
+cargarEnsayos();
+calcularDashboard();
 cargarTabla();
 
 </script>
