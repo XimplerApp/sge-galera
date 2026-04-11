@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Innovación Varietal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {font-family: Arial; background:#0f172a; color:white; padding:20px;}
+h1 {color:#38bdf8;}
+
+.card {
+  background:#1e293b;
+  padding:20px;
+  border-radius:10px;
+  margin-bottom:20px;
+}
+
+.kpi {font-size:18px; margin:5px 0;}
+
+.green {color:#22c55e;}
+.yellow {color:#facc15;}
+.red {color:#ef4444;}
+
+table {
+  width:100%;
+  border-collapse: collapse;
+  text-align:center;
+}
+
+th, td {
+  padding:10px;
+  border-bottom:1px solid #334155;
+}
+
+th {background:#1e293b;}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div style="display:flex; gap:10px; margin-bottom:20px;">
+  <a href="index.html"><button>📋 Ensayos</button></a>
+  <a href="bitacora.html"><button>📸 Bitácora</button></a>
+  <a href="resultados.html"><button>📊 Resultados</button></a>
+  <a href="pipeline.html"><button>🌱 Pipeline</button></a>
+  <a href="tablero.html"><button>🧠 Tablero</button></a>
+  <a href="innovacion.html"><button>🚀 Innovación</button></a>
+</div>
+
+<h1>🚀 Sistema de Innovación Varietal</h1>
+
+<!-- PANEL EJECUTIVO -->
+<div class="card">
+<h2>🧠 Panel Ejecutivo</h2>
+<div id="panel"></div>
+</div>
+
+<!-- RANKING VARIEDADES -->
+<div class="card">
+<h2>📊 Ranking de Variedades</h2>
+<table id="tabla">
+<tr>
+<th>Variedad</th>
+<th>Ensayos</th>
+<th>ROI Promedio</th>
+<th>Ventas</th>
+<th>Leads</th>
+<th>Conversión</th>
+<th>Estado</th>
+</tr>
+</table>
+</div>
+
+<script>
+
+// ===== DATA =====
+let ensayos = JSON.parse(localStorage.getItem("ensayos")) || [];
+let resultados = JSON.parse(localStorage.getItem("resultados")) || [];
+let oportunidades = JSON.parse(localStorage.getItem("oportunidades")) || [];
+
+// ===== PANEL EJECUTIVO =====
+function calcularPanel(){
+
+  let totalEnsayos = ensayos.length;
+  let activos = ensayos.filter(e => e.estado === "Activo").length;
+
+  let roiProm = resultados.length
+    ? resultados.reduce((a,b)=>a+b.roi,0)/resultados.length
+    : 0;
+
+  let leads = oportunidades.reduce((a,b)=>a+b.leads,0);
+  let ventas = oportunidades.reduce((a,b)=>a+b.ventaCerrada,0);
+
+  let conversion = leads > 0
+    ? (ventas / (oportunidades.reduce((a,b)=>a+b.ventaEstimada,0)||1))*100
+    : 0;
+
+  panel.innerHTML = `
+    <div class="kpi">📊 Total Ensayos: ${totalEnsayos}</div>
+    <div class="kpi">🟢 Ensayos Activos: ${activos}</div>
+    <div class="kpi">💰 ROI Promedio: ${(roiProm*100).toFixed(2)}%</div>
+    <div class="kpi">📈 Leads Generados: ${leads}</div>
+    <div class="kpi">💵 Ventas Cerradas: $${ventas.toLocaleString()}</div>
+    <div class="kpi">📊 Conversión Global: ${conversion.toFixed(2)}%</div>
+  `;
+}
+
+// ===== AGRUPAR POR VARIEDAD =====
+function calcularInnovacion(){
+
+  let mapa = {};
+
+  ensayos.forEach(e => {
+
+    let varName = e.variedad_tratada || "Sin nombre";
+
+    if(!mapa[varName]){
+      mapa[varName] = {
+        ensayos: 0,
+        roi: 0,
+        ventas: 0,
+        leads: 0,
+        estimado: 0
+      };
+    }
+
+    mapa[varName].ensayos++;
+
+    // ROI
+    let res = resultados.filter(r => r.ensayo_id == e.id);
+    if(res.length){
+      mapa[varName].roi += res.reduce((a,b)=>a+b.roi,0);
+    }
+
+    // Pipeline
+    let ops = oportunidades.filter(o => o.ensayo == e.id);
+    ops.forEach(o=>{
+      mapa[varName].ventas += o.ventaCerrada;
+      mapa[varName].leads += o.leads;
+      mapa[varName].estimado += o.ventaEstimada;
+    });
+
+  });
+
+  return mapa;
+}
+
+// ===== CLASIFICACIÓN =====
+function clasificar(roi, conversion){
+
+  if(roi >= 2.5 && conversion >= 25){
+    return {texto:"⭐ Escalar", clase:"green"};
+  }
+
+  if(roi >= 1.5){
+    return {texto:"🚀 Promesa", clase:"yellow"};
+  }
+
+  if(roi >= 0){
+    return {texto:"⚠️ Experimental", clase:"yellow"};
+  }
+
+  return {texto:"❌ Descartar", clase:"red"};
+}
+
+// ===== RENDER =====
+function render(){
+
+  calcularPanel();
+
+  let data = calcularInnovacion();
+
+  let tabla = document.getElementById("tabla");
+
+  Object.keys(data).forEach(v => {
+
+    let d = data[v];
+
+    let roiProm = d.ensayos ? d.roi / d.ensayos : 0;
+
+    let conversion = d.estimado > 0
+      ? (d.ventas / d.estimado)*100
+      : 0;
+
+    let estado = clasificar(roiProm, conversion);
+
+    tabla.innerHTML += `
+      <tr>
+        <td>${v}</td>
+        <td>${d.ensayos}</td>
+        <td>${(roiProm*100).toFixed(2)}%</td>
+        <td>$${d.ventas.toLocaleString()}</td>
+        <td>${d.leads}</td>
+        <td>${conversion.toFixed(2)}%</td>
+        <td class="${estado.clase}"><b>${estado.texto}</b></td>
+      </tr>
+    `;
+  });
+
+}
+
+// INIT
+render();
+
+</script>
+
+</body>
+</html>
