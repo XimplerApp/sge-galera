@@ -241,18 +241,68 @@ function dibujarRadar(data, variedad){
 // ===== RICE =====
 function calcularRICE(data){
 
-  let html = "";
+ let html = "";
 
   Object.keys(data).forEach(v=>{
 
     let d = data[v];
 
+    // 🔥 SCORE MEJORADO
     let score = ((d.leads + 1) * (d.ventas + 1) * (d.ensayos + 1)) / ((d.estimado || 0) + 1);
 
-    html += `<div class="kpi">${v}: ${score.toFixed(2)}</div>`;
+    // ===== CLASIFICACIÓN INTELIGENTE =====
+    let decision = "";
+    let clase = "";
+
+    if(score > 50000){
+      decision = "🔥 Invertir fuerte (Escalar YA)";
+      clase = "green";
+    }
+    else if(score > 10000){
+      decision = "🟢 Apostar (Alta prioridad)";
+      clase = "green";
+    }
+    else if(score > 1000){
+      decision = "🟡 Explorar (Validar más)";
+      clase = "yellow";
+    }
+    else if(score > 100){
+      decision = "⚠️ Bajo potencial (Revisar)";
+      clase = "yellow";
+    }
+    else{
+      decision = "🔴 No invertir (Descartar o pausar)";
+      clase = "red";
+    }
+
+    // ===== DIAGNÓSTICO =====
+    let diagnostico = "";
+
+    if(d.leads == 0){
+      diagnostico = "Sin interés de mercado";
+    }
+    else if(d.ventas == 0){
+      diagnostico = "Interés sin conversión";
+    }
+    else if(d.estimado > d.ventas){
+      diagnostico = "Baja rentabilidad";
+    }
+    else{
+      diagnostico = "Buen desempeño";
+    }
+
+    html += `
+      <div class="card">
+        <div class="kpi"><b>${v}</b></div>
+        <div class="kpi">Score: ${score.toFixed(2)}</div>
+        <div class="kpi ${clase}"><b>${decision}</b></div>
+        <div class="kpi">🧠 ${diagnostico}</div>
+      </div>
+    `;
   });
 
   document.getElementById("rice").innerHTML = html;
+
 }
 
 // ===== INSIGHTS AVANZADOS =====
