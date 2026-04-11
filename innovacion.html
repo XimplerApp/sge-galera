@@ -155,7 +155,7 @@ function agrupar(){
 
   ensayos.forEach(e => {
 
-    let v = e.variedad_tratada || "N/A";
+    let v = (e.variedad_tratada || "N/A").toLowerCase().trim();
 
     if(!mapa[v]){
       mapa[v] = {ensayos:0, roi:0, ventas:0, leads:0, estimado:0};
@@ -247,7 +247,7 @@ function calcularRICE(data){
 
     let d = data[v];
 
-    let score = (d.leads * d.ventas * d.ensayos) / (d.estimado || 1);
+    let score = ((d.leads + 1) * (d.ventas + 1) * (d.ensayos + 1)) / ((d.estimado || 0) + 1);
 
     html += `<div class="kpi">${v}: ${score.toFixed(2)}</div>`;
   });
